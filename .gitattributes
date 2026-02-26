@@ -1,0 +1,14 @@
+# Игнорирай output файлове от статистиката за езици
+output/*.html linguist-generated=true
+dist/*.html linguist-generated=true
+build/*.html linguist-generated=true
+
+# Markdown файлове не са документация, а код
+*.md linguist-documentation=false
+
+# Python файлове са основния език
+*.py linguist-language=Python
+
+# Игнорирай test файлове от статистиката
+**/tests/** linguist-vendored=true
+**/test_* linguist-vendored=true
