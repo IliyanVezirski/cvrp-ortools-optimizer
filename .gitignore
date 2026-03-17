@@ -66,6 +66,12 @@ data/
 # Output files (keep main output, ignore build artifacts)
 dist/output/
 build/
+output/
+
+# Input artifacts
+data/input.xlsx
+data/*.xlsx
+data/*.xls
 
 # Generated HTML maps (large files that skew language stats)
 # Comment these lines if you want to include output maps in Git
