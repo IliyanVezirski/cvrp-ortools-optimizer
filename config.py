@@ -66,17 +66,17 @@ class LocationConfig:
     enable_center_zone_priority: bool = True  # Дали да се прилага приоритет за център зоната
     
     # Параметри за глобата на останалите бусове за влизане в центъра
-    external_bus_center_penalty: float = 40000  # Множител за глоба на EXTERNAL_BUS за влизане в центъра
-    internal_bus_center_penalty: float = 40000   # Множител за глоба на INTERNAL_BUS за влизане в центъра
-    special_bus_center_penalty: float = 40000    # Множител за глоба на SPECIAL_BUS за влизане в центъра
-    vratza_bus_center_penalty: float = 40000   # Множител за глоба на VRATZA_BUS за влизане в центъра (като EXTERNAL_BUS)
+    external_bus_center_penalty: float = 40000.0  # Множител за глоба на EXTERNAL_BUS за влизане в центъра
+    internal_bus_center_penalty: float = 40000.0   # Множител за глоба на INTERNAL_BUS за влизане в центъра
+    special_bus_center_penalty: float = 40000.0    # Множител за глоба на SPECIAL_BUS за влизане в центъра
+    vratza_bus_center_penalty: float = 40000.0   # Множител за глоба на VRATZA_BUS за влизане в центъра (като EXTERNAL_BUS)
     enable_center_zone_restrictions: bool = True  # Дали да се прилагат ограничения за влизане в центъра
     discount_center_bus: float = 0.5  # Отстъпка за CENTER_BUS в център зоната (намалява разходите с 90%)
     
     # Параметри за градски трафик (задръствания в София)
     city_center_coords: Tuple[float, float] = (42.6977, 23.3219)  # Център на София (площад Независимост)
-    city_traffic_radius_km: float = 10.0  # Радиус на градската зона с трафик (км)
-    city_traffic_duration_multiplier: float = 1.6 # Множител за време в града (1.35 = +35% заради трафик)
+    city_traffic_radius_km: float = 9.0  # Радиус на градската зона с трафик (км)
+    city_traffic_duration_multiplier: float = 1.4 # Множител за време в града (1.35 = +35% заради трафик)
     enable_city_traffic_adjustment: bool = True  # Дали да се прилага корекция за градски трафик
 
 @dataclass
@@ -132,12 +132,22 @@ class OSRMConfig:
 
 @dataclass
 class InputConfig:
-    """Конфигурации за обработка на входните данни от Excel файл."""
-    excel_file_path: str = _abs_path("data/input.xlsx") # Път до входния Excel файл.
+    """Конфигурации за обработка на входните данни от Excel файл или HTTP JSON."""
+    input_source: str = "excel"  # Източник на данни: "excel" или "http_json"
+    excel_file_path: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\data/input.xlsx") # Път до входния Excel файл.
+    json_url: str = ""  # URL за HTTP JSON източник (използва се когато input_source="http_json")
+    json_gps_field: str = "GPS"          # Име на JSON полето с GPS координати.
+    json_client_id_field: str = "IdCust"  # Име на JSON полето с клиентски номер.
+    json_client_name_field: str = "CustName"  # Име на JSON полето с име на клиента.
+    json_volume_field: str = "Volume"     # Име на JSON полето с брой стекове.
+    json_document_field: str = "IdDoc"  # Име на JSON полето с номер на документа.
+    json_override_date: str = ""  # Конкретна дата (DD/MM/YYYY). Ако е празно, автоматично се изчислява следващият работен ден.
+    json_timeout_seconds: int = 30  # Таймаут за HTTP заявката в секунди.
     gps_column: str = "GPS"         # Име на колоната с GPS координатите на клиентите.
     client_id_column: str = "IdCust"      # Име на колоната с ID на клиента.
     client_name_column: str = "Клиент" # Име на колоната с името на клиента.
     volume_column: str = "Брой стекове"           # Име на колоната с обема/теглото на заявката.
+    document_column: str = "Документ"  # Име на колоната с номер на документа/поръчката.
     sheet_name: Optional[str] = None  # Име на листа в Excel файла. Ако е None, използва се първият наличен.
     encoding: str = "utf-8"           # Кодировка на файла.
 
@@ -149,8 +159,8 @@ class WarehouseConfig:
     sort_by_volume: bool = True        # Дали заявките да се сортират по обем (от най-малък към най-голям) преди обработка
     sort_by_distance: bool = True      # Дали да се сортират по разстояние за клиенти с еднакъв обем (от най-далечен към най-близък)
     check_max_bus_capacity: bool = True # Проверява дали клиент надвишава капацитета на най-големия наличен бус
-    max_bus_customer_volume: float = 120 # Максимален обем на клиент (стекове), над който се изпращат към склада, а не към бусовете
-    capacity_toleranse: float = 0.90 # Толеранс на капацитета на превозните средства.
+    max_bus_customer_volume: float = 100.0 # Максимален обем на клиент (стекове), над който се изпращат към склада, а не към бусовете
+    capacity_toleranse: float = 1.0 # Толеранс на капацитета на превозните средства.
 @dataclass
 class CVRPConfig:
     """
@@ -162,10 +172,10 @@ class CVRPConfig:
     algorithm: str = "or_tools"  # Основен алгоритъм. В момента се поддържа само "or_tools".
 
     # --- Основни параметри на търсенето ---
-    time_limit_seconds: int = 30
+    time_limit_seconds: int = 120
     # Описание: Максимално време в секунди, което solver-ът има за намиране на решение.
 
-    first_solution_strategy: str = "CHRISTOFIDES"
+    first_solution_strategy: str = "PARALLEL_CHEAPEST_INSERTION"
     # Описание: Стратегия за намиране на първоначално решение. SAVINGS е по-бърза от AUTOMATIC.
     # Стойности: "AUTOMATIC", "PATH_CHEAPEST_ARC", "SAVINGS", "SWEEP", и др.
 
@@ -256,20 +266,24 @@ class OutputConfig:
     """Конфигурации за генериране на изходни файлове (карти, Excel отчети, графики)."""
     # Интерактивна карта
     enable_interactive_map: bool = True # Дали да се генерира HTML файл с интерактивна карта на маршрутите.
-    map_output_file: str = _abs_path("output/interactive_map.html") # Път и име на файла за картата.
+    map_output_file: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/interactive_map.html") # Път и име на файла за картата.
+    routes_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/routes") # Директория за отделните HTML карти на маршрутите.
     map_zoom_level: int = 12 # Начално приближение на картата.
     show_route_colors: bool = True # Дали различните маршрути да се оцветяват в различни цветове.
     show_vehicle_info: bool = True # Дали да се показва информация за превозното средство при клик на маршрут.
     
     # Excel файлове
-    excel_output_dir: str = _abs_path("output/excel") # Директория за запис на Excel отчетите.
+    excel_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/excel") # Директория за запис на Excel отчетите.
     warehouse_excel_file: str = "warehouse_orders.xlsx" # Име на файла с необслужените клиенти (за склада).
     routes_excel_file: str = "vehicle_routes.xlsx" # Име на файла с детайли за всеки маршрут.
     efficiency_excel_file: str = "efficiency_report.xlsx" # Име на файла с отчет за ефективността.
     
+    # CSV файл с маршрути
+    csv_output_file: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/routes.csv") # Път и име на CSV файла с маршрутите.
+    
     # Графики и анализи
     enable_charts: bool = True # Дали да се генерират PNG файлове с графики.
-    charts_output_dir: str = _abs_path("output/charts") # Директория за запис на графиките.
+    charts_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/charts") # Директория за запис на графиките.
     efficiency_chart_file: str = "efficiency_analysis.png" # Графика с анализ на ефективността.
     route_comparison_file: str = "route_comparison.png" # Графика, сравняваща маршрутите.
     volume_distribution_file: str = "volume_distribution.png" # Графика с разпределението на обемите.
@@ -503,11 +517,21 @@ class ConfigManager:
     
     def _create_directories(self) -> None:
         """Създава необходимите директории"""
+        map_output_dir = self.config.output.map_output_file
+        if os.path.splitext(map_output_dir)[1]:
+            map_output_dir = os.path.dirname(map_output_dir)
+
+        csv_output_dir = self.config.output.csv_output_file
+        if os.path.splitext(csv_output_dir)[1]:
+            csv_output_dir = os.path.dirname(csv_output_dir)
+
         directories = [
             os.path.dirname(self.config.input.excel_file_path),
             self.config.output.excel_output_dir,
             self.config.output.charts_output_dir,
-            os.path.dirname(self.config.output.map_output_file),
+            self.config.output.routes_output_dir,
+            map_output_dir,
+            csv_output_dir,
             os.path.dirname(self.config.logging.log_file),
             self.config.cache.cache_dir
         ]

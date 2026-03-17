@@ -19,7 +19,29 @@ from osrm_client import get_distance_matrix_from_central_cache
 # OpenPyXL imports за Excel стилове
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Без GUI
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+
+def _normalize_output_file_path(path_value: str, default_filename: str) -> str:
+    """Normalize output file paths.
+
+    If the config contains a directory instead of a file path, append a default
+    filename so the application does not fail with PermissionError.
+    """
+    normalized = os.path.normpath(path_value)
+    _, extension = os.path.splitext(normalized)
+    if extension:
+        return normalized
+    return os.path.join(normalized, default_filename)
 
 # Настройки за различните типове превозни средства
 VEHICLE_SETTINGS = {
@@ -747,9 +769,154 @@ class InteractiveMapGenerator:
         legend_element = folium.Element(legend_html)
         route_map.get_root().add_child(legend_element)
     
+    def create_single_route_map(self, route: Route, route_number: int,
+                                depot_location: Tuple[float, float]) -> folium.Map:
+        """Създава интерактивна карта за един отделен маршрут"""
+        logger.info(f"Създавам карта за маршрут {route_number}")
+
+        # Взимаме депото на маршрута
+        route_depot = route.depot_location or depot_location
+
+        # Център на картата - средна точка на клиентите или депото
+        if route.customers:
+            coords = [c.coordinates for c in route.customers if c.coordinates]
+            if coords:
+                avg_lat = sum(c[0] for c in coords) / len(coords)
+                avg_lon = sum(c[1] for c in coords) / len(coords)
+                center = (avg_lat, avg_lon)
+            else:
+                center = route_depot
+        else:
+            center = route_depot
+
+        route_map = folium.Map(
+            location=center,
+            zoom_start=self.config.map_zoom_level,
+            tiles='OpenStreetMap'
+        )
+
+        # Добавяме маркер за депото
+        self._add_depot_markers(route_map, [route_depot])
+
+        # Добавяме център зоната
+        from config import get_config
+        cfg = get_config()
+        if cfg.locations.enable_center_zone_priority:
+            self._add_center_zone_circle(route_map, cfg.locations.center_location,
+                                         cfg.locations.center_zone_radius_km)
+
+        # Добавяме маршрута
+        vehicle_settings = VEHICLE_SETTINGS.get(route.vehicle_type.value, {
+            'color': 'gray', 'icon': 'circle', 'prefix': 'fa', 'name': 'Неизвестен'
+        })
+        bus_color = BUS_COLORS[(route_number - 1) % len(BUS_COLORS)]
+
+        bus_layer = folium.FeatureGroup(
+            name=f"\U0001f68c Автобус {route_number} ({len(route.customers)} клиента)")
+
+        # Маркери за клиентите
+        for client_idx, customer in enumerate(route.customers):
+            if customer.coordinates:
+                client_number = client_idx + 1
+                icon_html = f'''
+                <div style="
+                    background-color: {bus_color};
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    font-weight: bold;
+                    font-size: 14px;
+                    color: white;
+                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
+                ">{client_number}</div>
+                '''
+                popup_text = f"""
+                <div style="font-family: Arial, sans-serif;">
+                    <h4 style="margin: 0; color: {bus_color};">
+                        Автобус {route_number} - {vehicle_settings['name']}
+                    </h4>
+                    <hr style="margin: 5px 0;">
+                    <b>Клиент:</b> {customer.name}<br>
+                    <b>ID:</b> {customer.id}<br>
+                    <b>Ред в маршрута:</b> #{client_number}<br>
+                    <b>Обем:</b> {customer.volume:.2f} ст.<br>
+                    <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}
+                </div>
+                """
+                folium.Marker(
+                    customer.coordinates,
+                    popup=folium.Popup(popup_text, max_width=300),
+                    tooltip=f"#{client_number}: {customer.name}",
+                    icon=folium.DivIcon(
+                        html=icon_html,
+                        icon_size=(30, 30),
+                        icon_anchor=(15, 15),
+                        popup_anchor=(0, -15)
+                    )
+                ).add_to(bus_layer)
+
+        # Линия на маршрута
+        if route.customers:
+            waypoints = [route_depot]
+            for customer in route.customers:
+                if customer.coordinates:
+                    waypoints.append(customer.coordinates)
+            waypoints.append(route_depot)
+
+            if self.use_routing:
+                engine_name = "Valhalla" if self.routing_engine and self.routing_engine.value == RoutingEngine.VALHALLA.value else "OSRM"
+                try:
+                    route_geometry = self._get_full_route_geometry(waypoints)
+                    if len(route_geometry) > 2:
+                        folium.PolyLine(
+                            route_geometry, color=bus_color, weight=4, opacity=0.8
+                        ).add_to(bus_layer)
+                    else:
+                        folium.PolyLine(
+                            waypoints, color=bus_color, weight=3, opacity=0.6, dash_array='5, 5'
+                        ).add_to(bus_layer)
+                except Exception as e:
+                    logger.warning(f"Грешка при маршрут геометрия за маршрут {route_number}: {e}")
+                    folium.PolyLine(
+                        waypoints, color=bus_color, weight=3, opacity=0.6, dash_array='5, 5'
+                    ).add_to(bus_layer)
+            else:
+                folium.PolyLine(
+                    waypoints, color=bus_color, weight=3, opacity=0.8
+                ).add_to(bus_layer)
+
+        bus_layer.add_to(route_map)
+
+        # Легенда с информация за маршрута
+        legend_html = f'''
+        <div style="position: fixed;
+                    top: 10px; left: 10px; width: 260px; height: auto;
+                    background-color: white; border:2px solid grey; z-index:9999;
+                    font-size:14px; padding: 10px; border-radius: 5px;
+                    box-shadow: 0 0 15px rgba(0,0,0,0.2);">
+        <h4 style="margin-top:0; margin-bottom:10px; text-align: center;">
+            \U0001f68c Маршрут {route_number} - {vehicle_settings['name']}
+        </h4>
+        <p style="margin: 3px 0; font-size: 12px;">\U0001f4ca Клиенти: {len(route.customers)}</p>
+        <p style="margin: 3px 0; font-size: 12px;">\U0001f4cf Разстояние: {route.total_distance_km:.1f} км</p>
+        <p style="margin: 3px 0; font-size: 12px;">\u23f1 Време: {route.total_time_minutes:.0f} мин</p>
+        <p style="margin: 3px 0; font-size: 12px;">\U0001f4e6 Обем: {route.total_volume:.1f} ст.</p>
+        </div>
+        '''
+        route_map.get_root().add_child(folium.Element(legend_html))
+
+        return route_map
+
     def save_map(self, route_map: folium.Map, file_path: Optional[str] = None) -> str:
         """Записва картата във файл"""
-        file_path = file_path or self.config.map_output_file
+        file_path = _normalize_output_file_path(
+            file_path or self.config.map_output_file,
+            "interactive_map.html",
+        )
         
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         route_map.save(file_path)
@@ -806,7 +973,7 @@ class ExcelExporter:
         # Заглавни редове
         headers = [
             'Маршрут', 'Превозно средство', 'Ред в маршрута', 
-            'ID клиент', 'Име клиент', 'Обем (ст.)', 'GPS координати',
+            'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
             'Разстояние до центъра (км)', 'Депо стартова точка',
             'Разстояние от предишен (км)', 'Накоплено разстояние (км)',
             'Време от предишен (мин)', 'Накоплено време (мин)',
@@ -876,6 +1043,7 @@ class ExcelExporter:
                     j + 1,  # Ред в маршрута
                     customer.id,  # ID клиент
                     customer.name,  # Име клиент
+                    customer.document,  # Номер поръчка
                     customer.volume,  # Обем
                     customer.original_gps_data,  # GPS
                     round(distance_to_center, 2),  # Разстояние до центъра
@@ -1271,6 +1439,7 @@ class ExcelExporter:
                     'Ред в маршрута': j + 1,
                     'ID клиент': customer.id,
                     'Име клиент': customer.name,
+                    'Номер поръчка': customer.document,
                     'Обем (ст.)': customer.volume,
                     'GPS': customer.original_gps_data
                 })
@@ -1280,6 +1449,293 @@ class ExcelExporter:
         
         logger.info(f"Маршрути експортирани в {file_path}")
         return file_path
+
+    def export_routes_csv(self, solution: CVRPSolution) -> str:
+        """Експортира маршрутите като CSV файл (разделен по запетаи)"""
+        import csv
+        
+        file_path = _normalize_output_file_path(self.config.csv_output_file, "routes.csv")
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        headers = [
+            'Маршрут', 'Превозно средство', 'Ред в маршрута',
+            'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
+            'Разстояние до центъра (км)', 'Депо стартова точка',
+            'Разстояние от предишен (км)', 'Накоплено разстояние (км)',
+            'Време от предишен (мин)', 'Накоплено време (мин)',
+            'Стартово време (мин)', 'Време с натрупване (мин)', 'Време с натрупване (чч:мм)'
+        ]
+        
+        center_location = get_config().locations.center_location
+        
+        with open(file_path, 'w', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f, delimiter=',')
+            writer.writerow(headers)
+            
+            for i, route in enumerate(solution.routes):
+                vehicle_name = VEHICLE_SETTINGS.get(route.vehicle_type.value, {}).get('name', 'Неизвестен')
+                start_time_minutes = self._get_start_time_for_vehicle(route.vehicle_type)
+                vehicle_config = self._get_vehicle_config(route.vehicle_type)
+                service_time_minutes = vehicle_config.service_time_minutes if vehicle_config else 15
+                
+                cumulative_distance = 0
+                cumulative_time = 0
+                previous_customer_coords = route.depot_location
+                
+                for j, customer in enumerate(route.customers):
+                    distance_to_center = self._calculate_distance_to_center(
+                        customer.coordinates, center_location) if customer.coordinates else 0.0
+                    distance_from_previous = self._calculate_distance_between_points(
+                        previous_customer_coords, customer.coordinates) if customer.coordinates else 0.0
+                    cumulative_distance += distance_from_previous
+                    time_from_previous = self._calculate_time_between_points(
+                        previous_customer_coords, customer.coordinates) if customer.coordinates else 0.0
+                    total_time_for_this_step = time_from_previous + service_time_minutes
+                    cumulative_time += total_time_for_this_step
+                    total_time_with_start = start_time_minutes + cumulative_time
+                    
+                    row = [
+                        i + 1,
+                        vehicle_name,
+                        j + 1,
+                        customer.id,
+                        customer.name,
+                        customer.document,
+                        customer.volume,
+                        customer.original_gps_data,
+                        round(distance_to_center, 2),
+                        f"{route.depot_location[0]:.6f}, {route.depot_location[1]:.6f}",
+                        round(distance_from_previous, 2),
+                        round(cumulative_distance, 2),
+                        round(total_time_for_this_step, 1),
+                        round(cumulative_time, 1),
+                        start_time_minutes,
+                        round(total_time_with_start, 1),
+                        self._format_time_hh_mm(int(total_time_with_start))
+                    ]
+                    writer.writerow(row)
+                    previous_customer_coords = customer.coordinates
+        
+        logger.info(f"CSV маршрути експортирани в {file_path}")
+        return file_path
+
+
+class ChartGenerator:
+    """Генератор на графики за анализ на маршрутите"""
+
+    def __init__(self, config: OutputConfig):
+        self.config = config
+
+    def generate_all_charts(self, solution: CVRPSolution,
+                            warehouse_customers: List[Customer]) -> Dict[str, str]:
+        """Генерира всички графики и връща пътищата до файловете"""
+        if not MATPLOTLIB_AVAILABLE:
+            logger.warning("matplotlib не е инсталиран — графиките се пропускат")
+            return {}
+
+        os.makedirs(self.config.charts_output_dir, exist_ok=True)
+        output_files = {}
+
+        try:
+            path = self._generate_efficiency_chart(solution, warehouse_customers)
+            if path:
+                output_files['efficiency_chart'] = path
+        except Exception as e:
+            logger.error(f"Грешка при генериране на efficiency chart: {e}")
+
+        try:
+            path = self._generate_route_comparison_chart(solution)
+            if path:
+                output_files['route_comparison_chart'] = path
+        except Exception as e:
+            logger.error(f"Грешка при генериране на route comparison chart: {e}")
+
+        try:
+            path = self._generate_volume_distribution_chart(solution)
+            if path:
+                output_files['volume_distribution_chart'] = path
+        except Exception as e:
+            logger.error(f"Грешка при генериране на volume distribution chart: {e}")
+
+        logger.info(f"Генерирани {len(output_files)} графики в {self.config.charts_output_dir}")
+        return output_files
+
+    def _generate_efficiency_chart(self, solution: CVRPSolution,
+                                    warehouse_customers: List[Customer]) -> Optional[str]:
+        """Графика с анализ на ефективността — капацитет, време, обслужени/необслужени"""
+        if not solution.routes:
+            return None
+
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        fig.suptitle('Анализ на ефективността', fontsize=16, fontweight='bold')
+
+        # 1. Капацитет използване по маршрут
+        ax1 = axes[0]
+        labels = []
+        usages = []
+        for i, route in enumerate(solution.routes):
+            vc = self._get_vehicle_config(route.vehicle_type)
+            cap = vc.capacity if vc else 1
+            usage = (route.total_volume / cap * 100) if cap > 0 else 0
+            labels.append(f"М{i+1}")
+            usages.append(usage)
+
+        colors = [BUS_COLORS[i % len(BUS_COLORS)] for i in range(len(labels))]
+        bars = ax1.bar(labels, usages, color=colors, edgecolor='white')
+        ax1.axhline(y=100, color='red', linestyle='--', linewidth=1, label='100%')
+        ax1.set_ylabel('Използване (%)')
+        ax1.set_title('Капацитет по маршрут')
+        ax1.set_ylim(0, max(usages + [100]) * 1.15)
+        for bar, val in zip(bars, usages):
+            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
+                     f'{val:.0f}%', ha='center', va='bottom', fontsize=8)
+
+        # 2. Обслужени vs Необслужени клиенти (pie)
+        ax2 = axes[1]
+        served = sum(len(r.customers) for r in solution.routes)
+        unserved = len(warehouse_customers) + len(solution.dropped_customers)
+        if served + unserved > 0:
+            ax2.pie([served, unserved],
+                    labels=[f'Обслужени ({served})', f'Необслужени ({unserved})'],
+                    autopct='%1.1f%%', colors=['#2ecc71', '#e74c3c'],
+                    startangle=90, textprops={'fontsize': 10})
+        ax2.set_title('Обслужени / Необслужени')
+
+        # 3. Обобщена лента — разстояние, време, обем
+        ax3 = axes[2]
+        total_dist = solution.total_distance_km
+        total_time = solution.total_time_minutes
+        total_vol = solution.total_served_volume
+        cats = ['Разстояние\n(км)', 'Време\n(мин)', 'Обем\n(ст.)']
+        vals = [total_dist, total_time, total_vol]
+        bar_colors = ['#3498db', '#e67e22', '#9b59b6']
+        bars3 = ax3.bar(cats, vals, color=bar_colors, edgecolor='white')
+        for bar, val in zip(bars3, vals):
+            ax3.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                     f'{val:.1f}', ha='center', va='bottom', fontsize=9)
+        ax3.set_title('Обобщени показатели')
+        ax3.set_ylabel('Стойност')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        file_path = os.path.join(self.config.charts_output_dir, self.config.efficiency_chart_file)
+        fig.savefig(file_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        logger.info(f"Графика записана: {file_path}")
+        return file_path
+
+    def _generate_route_comparison_chart(self, solution: CVRPSolution) -> Optional[str]:
+        """Сравнение на маршрутите — разстояние, време, обем за всеки"""
+        if not solution.routes:
+            return None
+
+        n = len(solution.routes)
+        labels = [f"М{i+1}" for i in range(n)]
+        distances = [r.total_distance_km for r in solution.routes]
+        times = [r.total_time_minutes for r in solution.routes]
+        volumes = [r.total_volume for r in solution.routes]
+        clients = [len(r.customers) for r in solution.routes]
+
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig.suptitle('Сравнение на маршрутите', fontsize=16, fontweight='bold')
+
+        colors = [BUS_COLORS[i % len(BUS_COLORS)] for i in range(n)]
+
+        # Разстояние
+        ax = axes[0, 0]
+        ax.bar(labels, distances, color=colors, edgecolor='white')
+        ax.set_title('Разстояние (км)')
+        ax.set_ylabel('км')
+        for i, v in enumerate(distances):
+            ax.text(i, v + 0.3, f'{v:.1f}', ha='center', fontsize=8)
+
+        # Време
+        ax = axes[0, 1]
+        ax.bar(labels, times, color=colors, edgecolor='white')
+        ax.set_title('Време (мин)')
+        ax.set_ylabel('мин')
+        for i, v in enumerate(times):
+            ax.text(i, v + 0.3, f'{v:.0f}', ha='center', fontsize=8)
+
+        # Обем
+        ax = axes[1, 0]
+        ax.bar(labels, volumes, color=colors, edgecolor='white')
+        ax.set_title('Обем (ст.)')
+        ax.set_ylabel('ст.')
+        for i, v in enumerate(volumes):
+            ax.text(i, v + 0.3, f'{v:.1f}', ha='center', fontsize=8)
+
+        # Брой клиенти
+        ax = axes[1, 1]
+        ax.bar(labels, clients, color=colors, edgecolor='white')
+        ax.set_title('Брой клиенти')
+        ax.set_ylabel('бр.')
+        for i, v in enumerate(clients):
+            ax.text(i, v + 0.1, str(v), ha='center', fontsize=8)
+
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        file_path = os.path.join(self.config.charts_output_dir, self.config.route_comparison_file)
+        fig.savefig(file_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        logger.info(f"Графика записана: {file_path}")
+        return file_path
+
+    def _generate_volume_distribution_chart(self, solution: CVRPSolution) -> Optional[str]:
+        """Разпределение на обемите по клиенти (хистограма + по маршрут)"""
+        if not solution.routes:
+            return None
+
+        all_volumes = []
+        route_labels = []
+        route_volumes = []
+        for i, route in enumerate(solution.routes):
+            vols = [c.volume for c in route.customers]
+            all_volumes.extend(vols)
+            route_labels.append(f"М{i+1}")
+            route_volumes.append(vols)
+
+        if not all_volumes:
+            return None
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        fig.suptitle('Разпределение на обемите', fontsize=16, fontweight='bold')
+
+        # 1. Хистограма на всички обеми
+        ax1 = axes[0]
+        ax1.hist(all_volumes, bins=min(20, len(set(all_volumes))), color='#3498db',
+                 edgecolor='white', alpha=0.85)
+        ax1.set_xlabel('Обем (ст.)')
+        ax1.set_ylabel('Брой клиенти')
+        ax1.set_title('Разпределение на обемите')
+        mean_vol = sum(all_volumes) / len(all_volumes)
+        ax1.axvline(mean_vol, color='red', linestyle='--', label=f'Средно: {mean_vol:.1f}')
+        ax1.legend()
+
+        # 2. Box plot по маршрут
+        ax2 = axes[1]
+        if route_volumes and any(route_volumes):
+            bp = ax2.boxplot(route_volumes, labels=route_labels, patch_artist=True)
+            for i, box in enumerate(bp['boxes']):
+                box.set_facecolor(BUS_COLORS[i % len(BUS_COLORS)])
+                box.set_alpha(0.7)
+        ax2.set_xlabel('Маршрут')
+        ax2.set_ylabel('Обем (ст.)')
+        ax2.set_title('Обеми по маршрут')
+
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        file_path = os.path.join(self.config.charts_output_dir, self.config.volume_distribution_file)
+        fig.savefig(file_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        logger.info(f"Графика записана: {file_path}")
+        return file_path
+
+    def _get_vehicle_config(self, vehicle_type):
+        """Връща конфигурацията за даден тип превозно средство"""
+        vehicle_configs = get_config().vehicles
+        if vehicle_configs:
+            for config in vehicle_configs:
+                if config.vehicle_type == vehicle_type:
+                    return config
+        return None
 
 
 class OutputHandler:
@@ -1296,12 +1752,23 @@ class OutputHandler:
         logger.info("Започвам генериране на изходни файлове")
         output_files = {}
 
-        # 1. Интерактивна карта
+        # 1. Интерактивна карта (обща)
         if self.config.enable_interactive_map:
             map_gen = InteractiveMapGenerator(self.config)
             route_map = map_gen.create_map(solution, warehouse_allocation, depot_location)
             map_file = map_gen.save_map(route_map)
             output_files['map'] = map_file
+
+            # 1.1. Отделни HTML карти за всеки маршрут
+            routes_dir = self.config.routes_output_dir
+            os.makedirs(routes_dir, exist_ok=True)
+            for idx, route in enumerate(solution.routes):
+                route_number = idx + 1
+                single_map = map_gen.create_single_route_map(route, route_number, depot_location)
+                route_file = os.path.join(routes_dir, f"{route_number}.html")
+                map_gen.save_map(single_map, route_file)
+                output_files[f'route_map_{route_number}'] = route_file
+            logger.info(f"Генерирани {len(solution.routes)} отделни HTML карти в {routes_dir}")
         
         # 2. Обединяване на всички необслужени клиенти
         all_unserviced_customers = warehouse_allocation.warehouse_customers + solution.dropped_customers
@@ -1311,6 +1778,20 @@ class OutputHandler:
             excel_file = self.excel_exporter.export_all_to_single_excel(solution, all_unserviced_customers)
             if excel_file:
                 output_files['excel_report'] = excel_file
+        
+        # 4. CSV файл с маршрутите
+        if solution.routes:
+            csv_file = self.excel_exporter.export_routes_csv(solution)
+            if csv_file:
+                output_files['csv_routes'] = csv_file
+        
+        # 5. Графики (charts)
+        try:
+            chart_gen = ChartGenerator(self.config)
+            chart_files = chart_gen.generate_all_charts(solution, all_unserviced_customers)
+            output_files.update(chart_files)
+        except Exception as e:
+            logger.error(f"Грешка при генериране на графики: {e}")
         
         logger.info(f"Генерирани {len(output_files)} изходни файла")
         return output_files

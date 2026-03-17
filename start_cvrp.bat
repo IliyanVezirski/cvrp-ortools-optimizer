@@ -1,18 +1,20 @@
-@echo off
-echo CVRP Optimizer - Стартиране...
+﻿@echo off
+set "APP_DIR=%~dp0"
+cd /d "%APP_DIR%"
+set "PYINSTALLER_RESET_ENVIRONMENT=1"
+set "_MEIPASS2="
+echo CVRP Optimizer - Starting...
 echo.
 
 REM Проверяваме дали има входен файл
-if exist "data\input.xlsx" (
-    echo Намерен входен файл: data\input.xlsx
-    CVRP_Optimizer.exe data\input.xlsx
+if exist "%APP_DIR%data\input.xlsx" (
+    echo Input file found: %APP_DIR%data\input.xlsx
+    "%APP_DIR%CVRP_Optimizer.exe" "%APP_DIR%data\input.xlsx"
 ) else (
-    echo ВАЖНО: Не е намерен входен файл в data\input.xlsx
-    echo Моля, поставете входния файл в директорията data\input.xlsx
-    echo или директно в текущата директория като input.xlsx
+    echo Input file not found in data\input.xlsx
+    echo Place the input file in data\input.xlsx
+    echo or in the current directory as input.xlsx
     echo.
-    echo Програмата ще се опита да стартира с наличните файлове...
-    CVRP_Optimizer.exe
+    echo Starting with current configuration...
+    "%APP_DIR%CVRP_Optimizer.exe"
 )
-
-REM Програмата сама ще пита за повторно стартиране

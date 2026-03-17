@@ -415,4 +415,8 @@ if __name__ == "__main__":
     if sys.stdout.encoding != 'utf-8':
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
-    main() 
+    try:
+        main()
+    except Exception as e:
+        logger.error(f"Критична грешка: {e}", exc_info=True)
+        sys.exit(1)

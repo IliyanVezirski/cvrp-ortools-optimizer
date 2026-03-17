@@ -184,8 +184,10 @@ def create_spec_file():
         f"(r'{os.path.join(project_dir, 'osrm_client.py')}', '.')",
         f"(r'{os.path.join(project_dir, 'valhalla_client.py')}', '.')",
         f"(r'{os.path.join(project_dir, 'config.py')}', '.')",
+        f"(r'{os.path.join(project_dir, 'config_gui.py')}', '.')",
         f"(r'{os.path.join(project_dir, 'main.py')}', '.')",
         f"(r'{os.path.join(project_dir, 'main_exe.py')}', '.')",
+        f"(r'{os.path.join(project_dir, 'run_main.py')}', '.')",
         f"(r'{os.path.join(project_dir, 'data')}', 'data')",
         f"(r'{os.path.join(project_dir, 'logs')}', 'logs')",
         f"(r'{os.path.join(project_dir, 'output')}', 'output')",
@@ -263,6 +265,17 @@ a = Analysis(
         'openpyxl.worksheet',
         'requests',
         'numpy',
+        'numpy.random',
+        'numpy.random._generator',
+        'numpy.random._bounded_integers',
+        'numpy.random._common',
+        'numpy.random._mt19937',
+        'numpy.random._pcg64',
+        'numpy.random._philox',
+        'numpy.random._sfc64',
+        'numpy.random._pickle',
+        'numpy.random.bit_generator',
+        'numpy.random.mtrand',
         'multiprocessing',
         'logging',
         'pathlib',
@@ -290,14 +303,26 @@ a = Analysis(
         'jinja2',
         # Valhalla клиент
         'valhalla_client',
+        # Matplotlib за графики (ChartGenerator)
+        'matplotlib',
+        'matplotlib.pyplot',
+        'matplotlib.ticker',
+        'matplotlib.backends',
+        'matplotlib.backends.backend_agg',
+        # HTTP JSON входни данни
+        'urllib.request',
+        'json',
+        'ssl',
+        # tkinter за config_gui
+        'tkinter',
+        'tkinter.ttk',
+        'tkinter.messagebox',
     ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[
-        'matplotlib',
         'scipy',
         'PIL',
-        'tkinter',
         'PyQt5',
         'PyQt6',
         'PySide2',
@@ -409,6 +434,8 @@ def build_exe():
     # Взимаме текущата директория на проекта
     project_dir = os.path.dirname(os.path.abspath(__file__))
     spec_file = os.path.join(project_dir, 'CVRP_Optimizer.spec')
+    dist_dir = os.path.join(project_dir, '..', 'dist')
+    build_dir = os.path.join(project_dir, '..', 'build')
     
     try:
         # Първо опитваме с .spec файла
@@ -416,13 +443,15 @@ def build_exe():
         subprocess.check_call([
             sys.executable, '-m', 'PyInstaller',
             '--clean',
+            '--distpath', dist_dir,
+            '--workpath', build_dir,
             spec_file
         ])
         
         print("✅ EXE файлът е създаден успешно!")
         
         # Проверяваме дали файлът съществува
-        exe_path = Path(os.path.join(project_dir, 'dist', 'CVRP_Optimizer.exe'))
+        exe_path = Path(os.path.join(dist_dir, 'CVRP_Optimizer.exe'))
         if exe_path.exists():
             print(f"📁 EXE файл: {exe_path.absolute()}")
             return True
@@ -442,13 +471,15 @@ def build_exe():
                 '--onefile',
                 '--console',
                 '--name', 'CVRP_Optimizer',
+                '--distpath', dist_dir,
+                '--workpath', build_dir,
                 main_exe_path
             ])
             
             print("✅ EXE файлът е създаден успешно!")
             
             # Проверяваме дали файлът съществува
-            exe_path = Path(os.path.join(project_dir, 'dist', 'CVRP_Optimizer.exe'))
+            exe_path = Path(os.path.join(dist_dir, 'CVRP_Optimizer.exe'))
             if exe_path.exists():
                 print(f"📁 EXE файл: {exe_path.absolute()}")
                 return True
@@ -464,32 +495,34 @@ def create_batch_file():
     """Създава .bat файл за лесно стартиране"""
     # Използваме динамични пътища за batch файла
     project_dir = os.path.dirname(os.path.abspath(__file__))
-    dist_dir = os.path.join(project_dir, 'dist')
+    dist_dir = os.path.join(project_dir, '..', 'dist')
     
     batch_content = '''@echo off
-echo CVRP Optimizer - Стартиране...
+set "APP_DIR=%~dp0"
+cd /d "%APP_DIR%"
+set "PYINSTALLER_RESET_ENVIRONMENT=1"
+set "_MEIPASS2="
+echo CVRP Optimizer - Starting...
 echo.
 
 REM Проверяваме дали има входен файл
-if exist "data\\input.xlsx" (
-    echo Намерен входен файл: data\\input.xlsx
-    CVRP_Optimizer.exe data\\input.xlsx
+if exist "%APP_DIR%data\input.xlsx" (
+    echo Input file found: %APP_DIR%data\input.xlsx
+    "%APP_DIR%CVRP_Optimizer.exe" "%APP_DIR%data\input.xlsx"
 ) else (
-    echo ВАЖНО: Не е намерен входен файл в data\\input.xlsx
-    echo Моля, поставете входния файл в директорията data\\input.xlsx
-    echo или директно в текущата директория като input.xlsx
+    echo Input file not found in data\input.xlsx
+    echo Place the input file in data\input.xlsx
+    echo or in the current directory as input.xlsx
     echo.
-    echo Програмата ще се опита да стартира с наличните файлове...
-    CVRP_Optimizer.exe
+    echo Starting with current configuration...
+    "%APP_DIR%CVRP_Optimizer.exe"
 )
-
-REM Програмата сама ще пита за повторно стартиране
 '''
     
     # Създаваме batch файл в dist директорията
     batch_file_path = os.path.join(project_dir, 'start_cvrp.bat')
     
-    with open(batch_file_path, 'w', encoding='utf-8') as f:
+    with open(batch_file_path, 'w', encoding='utf-8-sig') as f:
         f.write(batch_content)
     
     # Копираме batch файла и в dist директорията
@@ -497,10 +530,20 @@ REM Програмата сама ще пита за повторно старт
     if not os.path.exists(dist_dir):
         os.makedirs(dist_dir)
     
-    with open(dist_batch_path, 'w', encoding='utf-8') as f:
+    with open(dist_batch_path, 'w', encoding='utf-8-sig') as f:
         f.write(batch_content)
     
     print(f"✅ Създаден start_cvrp.bat файл в {batch_file_path} и {dist_batch_path}")
+
+    # Създаваме Settings.bat за настройки
+    settings_content = '@echo off\r\nset "APP_DIR=%~dp0"\r\ncd /d "%APP_DIR%"\r\nset "PYINSTALLER_RESET_ENVIRONMENT=1"\r\nset "_MEIPASS2="\r\n"%APP_DIR%CVRP_Optimizer.exe" --settings\r\n'
+    for d in [dist_dir, project_dir]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+        bat_path = os.path.join(d, 'Settings.bat')
+        with open(bat_path, 'w', encoding='utf-8-sig') as f:
+            f.write(settings_content)
+    print(f"✅ Създаден Settings.bat")
 
 def main():
     """Главна функция"""
@@ -526,12 +569,18 @@ def main():
     
     # 3. Компилираме EXE
     if build_exe():
-        # 4. Създаваме .bat файл
+        # 4. Създаваме .bat файл и shortcut
         create_batch_file()
         
-        # Намираме пътя до генерирания EXE файл
+        # 5. Копираме config.py в dist/ за Settings GUI
         project_dir = os.path.dirname(os.path.abspath(__file__))
-        dist_dir = os.path.join(project_dir, 'dist')
+        dist_dir = os.path.join(project_dir, '..', 'dist')
+        src_config = os.path.join(project_dir, 'config.py')
+        dst_config = os.path.join(dist_dir, 'config.py')
+        if os.path.exists(src_config):
+            shutil.copy2(src_config, dst_config)
+            print(f"✅ Копиран config.py в {dist_dir}")
+        
         exe_path = os.path.join(dist_dir, 'CVRP_Optimizer.exe')
         
         print("\n🎉 Създаването на EXE файла завърши успешно!")

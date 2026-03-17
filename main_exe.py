@@ -10,6 +10,56 @@ import shutil
 from pathlib import Path
 import importlib.util
 
+
+def _resolve_runtime_path(base_dir: Path, configured_path: str, default_relative_path: str) -> str:
+    """Resolve config paths for EXE mode.
+
+    Absolute paths are preserved as-is so Settings can point anywhere.
+    Relative paths are resolved relative to the EXE directory.
+    Empty values fall back to a default path under the EXE directory.
+    """
+    raw_path = (configured_path or "").strip()
+    if not raw_path:
+        return str(base_dir / default_relative_path)
+
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return str(candidate)
+
+    return str((base_dir / candidate).resolve())
+
+
+def _ensure_runtime_output_directories(config) -> None:
+    """Create directories required by the current runtime config."""
+    directories = [
+        os.path.dirname(config.input.excel_file_path),
+        config.output.excel_output_dir,
+        config.output.charts_output_dir,
+        config.output.routes_output_dir,
+        os.path.dirname(config.output.map_output_file),
+        os.path.dirname(config.output.csv_output_file),
+        os.path.dirname(config.logging.log_file),
+        config.cache.cache_dir,
+    ]
+
+    for directory in directories:
+        if not directory:
+            continue
+
+        normalized = os.path.normpath(directory)
+        drive, tail = os.path.splitdrive(normalized)
+
+        # Skip creating plain drive roots or invalid drive-only paths.
+        if normalized in (drive + os.sep, drive + "\\", drive + "/"):
+            continue
+
+        if drive and not os.path.exists(drive + os.sep):
+            logging.warning(f"Пропускам несъществуващ drive за директория: {directory}")
+            continue
+
+        if not os.path.exists(normalized):
+            os.makedirs(normalized, exist_ok=True)
+
 def setup_exe_environment():
     """Настройва средата за EXE изпълнение"""
     # Променяме работната директория към директорията на EXE файла
@@ -25,9 +75,9 @@ def setup_exe_environment():
         print(f"📁 Работна директория: {script_dir}")
     
     # Създаваме необходимите директории ако не съществуват
-    directories = ['logs', 'output', 'cache', 'data', 'output/excel', 'output/charts']
+    directories = ['logs', 'output', 'cache', 'data', 'output/excel', 'output/charts', 'output/routes']
     for directory in directories:
-        Path(directory).mkdir(exist_ok=True)
+        Path(directory).mkdir(parents=True, exist_ok=True)
     
     # Настройваме logging за EXE
     logging.basicConfig(
@@ -60,20 +110,54 @@ def load_config():
             sys.modules['config'] = config
             spec.loader.exec_module(config)
             
-            # Важно: Тук променяме пътя до входния файл да бъде спрямо EXE директорията, а не хардкоднат
+            # В EXE режим относителните пътища се връзват към папката на exe-то,
+            # а абсолютните стойности от Settings се запазват без промяна.
             if getattr(sys, 'frozen', False):
                 exe_dir = Path(sys.executable).parent
-                # Променяме пътя на входния файл
-                input_config = config.get_config().input
-                input_config.excel_file_path = str(exe_dir / 'data' / 'input.xlsx')
-                print(f"📝 Пренасочвам входния файл към: {input_config.excel_file_path}")
-                
-                # Променяме и пътищата на изходните файлове
-                output_config = config.get_config().output
-                output_config.map_output_file = str(exe_dir / 'output' / 'interactive_map.html')
-                output_config.excel_output_dir = str(exe_dir / 'output' / 'excel')
-                output_config.charts_output_dir = str(exe_dir / 'output' / 'charts')
-                print(f"📝 Пренасочвам изходните файлове към директория: {exe_dir / 'output'}")
+                runtime_config = config.get_config()
+                input_config = runtime_config.input
+                output_config = runtime_config.output
+
+                input_config.excel_file_path = _resolve_runtime_path(
+                    exe_dir,
+                    input_config.excel_file_path,
+                    'data/input.xlsx',
+                )
+
+                output_config.map_output_file = _resolve_runtime_path(
+                    exe_dir,
+                    output_config.map_output_file,
+                    'output/interactive_map.html',
+                )
+                output_config.routes_output_dir = _resolve_runtime_path(
+                    exe_dir,
+                    output_config.routes_output_dir,
+                    'output/routes',
+                )
+                output_config.excel_output_dir = _resolve_runtime_path(
+                    exe_dir,
+                    output_config.excel_output_dir,
+                    'output/excel',
+                )
+                output_config.csv_output_file = _resolve_runtime_path(
+                    exe_dir,
+                    output_config.csv_output_file,
+                    'output/routes.csv',
+                )
+                output_config.charts_output_dir = _resolve_runtime_path(
+                    exe_dir,
+                    output_config.charts_output_dir,
+                    'output/charts',
+                )
+
+                _ensure_runtime_output_directories(runtime_config)
+
+                print(f"📝 Входен файл: {input_config.excel_file_path}")
+                print(f"📝 HTML карта: {output_config.map_output_file}")
+                print(f"📝 HTML маршрути: {output_config.routes_output_dir}")
+                print(f"📝 Excel директория: {output_config.excel_output_dir}")
+                print(f"📝 CSV файл: {output_config.csv_output_file}")
+                print(f"📝 Графики: {output_config.charts_output_dir}")
             
             print(f"✅ Конфигурация заредена от: {config_path}")
         else:
@@ -89,28 +173,34 @@ else:
     current_dir = Path(__file__).parent
     sys.path.insert(0, str(current_dir))
 
-# Импортираме главната функция
-from main import main
-
 def main_exe():
     """Главна функция за EXE"""
-    while True:  # Добавяме безкраен цикъл за повторно стартиране
+    try:
+        setup_exe_environment()
+        load_config()
+        
+        print("🚀 Стартиране на CVRP оптимизация...")
+        print("=" * 50)
+        
+        current_dir = os.getcwd()
+        
+        # Проверяваме input_source от конфигурацията
         try:
-            setup_exe_environment()
-            load_config()
-            
-            print("🚀 Стартиране на CVRP оптимизация...")
-            print("=" * 50)
-            
-            # Проверяваме дали има входен файл като аргумент
-            input_file = None
-            current_dir = os.getcwd()
-            
+            import config
+            cfg = config.get_config()
+            input_source = getattr(cfg.input, 'input_source', 'excel')
+        except Exception:
+            input_source = 'excel'
+        
+        input_file = None
+        if input_source == 'http_json':
+            print("🌐 Режим: HTTP JSON - данните ще се заредят от сървъра.")
+        else:
+            # Excel режим - търсим входен файл
             if len(sys.argv) > 1:
                 input_file = sys.argv[1]
                 print(f"📁 Използвам входен файл от аргумент: {input_file}")
             else:
-                # Търсим подразбиращ се файл - първо проверяваме в текущата директория
                 default_files = [
                     os.path.join(current_dir, 'data', 'input.xlsx'), 
                     os.path.join(current_dir, 'input.xlsx')
@@ -125,52 +215,41 @@ def main_exe():
                 if not input_file:
                     print("⚠️ Не е намерен входен файл. Създайте data/input.xlsx или посочете файл като аргумент.")
                     print("💡 Пример: CVRP_Optimizer.exe data/my_data.xlsx")
+                    print("💡 Или променете input_source на 'http_json' в config.py")
                     input("\nНатиснете Enter за да затворите програмата...")
                     sys.exit(1)
-            
-            # Заменяме sys.argv с правилните аргументи
-            original_argv = sys.argv.copy()
-            sys.argv = [sys.argv[0]]  # Запазваме само името на програмата
-            if input_file:
-                sys.argv.append(input_file)
-            
-            # Принтираме информация за пътя на файла, за да е по-ясно къде се търси
-            print(f"📁 Използвам файл: {input_file}")
-            print(f"📁 Текуща директория: {current_dir}")
-            
-            # Изпълняваме главната функция
-            main()
-            
-            # Възстановяваме оригиналните аргументи
-            sys.argv = original_argv
-            
-            # Не копираме файлове, те се създават директно в правилните директории
-            print("\n✅ Програмата завърши успешно!")
-            print(f"📁 Резултатите са в директорията: {os.path.join(current_dir, 'output')}")
-            
-            # Питаме потребителя дали иска да стартира програмата отново
-            restart = input("\n🔄 Искате ли да стартирате програмата отново? (да/не): ").lower().strip()
-            if restart != 'да' and restart != 'y' and restart != 'yes' and restart != 'д':
-                print("👋 Благодаря, че използвахте програмата! Довиждане!")
-                break  # Излизаме от безкрайния цикъл
-            
-        except KeyboardInterrupt:
-            print("\n⚠️ Програмата е прекъсната от потребителя.")
-            restart = input("\n🔄 Искате ли да стартирате програмата отново? (да/не): ").lower().strip()
-            if restart != 'да' and restart != 'y' and restart != 'yes' and restart != 'д':
-                print("👋 Благодаря, че използвахте програмата! Довиждане!")
-                break  # Излизаме от безкрайния цикъл
-        except Exception as e:
-            print(f"\n❌ Грешка при изпълнение: {e}")
-            logging.error(f"EXE грешка: {e}", exc_info=True)
-            
-            # Питаме потребителя дали иска да опита отново въпреки грешката
-            restart = input("\n🔄 Искате ли да стартирате програмата отново? (да/не): ").lower().strip()
-            if restart != 'да' and restart != 'y' and restart != 'yes' and restart != 'д':
-                print("👋 Благодаря, че използвахте програмата! Довиждане!")
-                break  # Излизаме от безкрайния цикъл
+        
+        # Заменяме sys.argv с правилните аргументи
+        original_argv = sys.argv.copy()
+        sys.argv = [sys.argv[0]]
+        if input_file:
+            sys.argv.append(input_file)
+        
+        print(f"📁 Текуща директория: {current_dir}")
+        
+        # Изпълняваме главната функция
+        from main import main
+        main()
+        
+        # Възстановяваме оригиналните аргументи
+        sys.argv = original_argv
+        
+        print("\n✅ Програмата завърши успешно!")
+        print(f"📁 Резултатите са в директорията: {os.path.join(current_dir, 'output')}")
+        
+    except KeyboardInterrupt:
+        print("\n⚠️ Програмата е прекъсната от потребителя.")
+    except Exception as e:
+        print(f"\n❌ Грешка при изпълнение: {e}")
+        logging.error(f"EXE грешка: {e}", exc_info=True)
 
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
-    main_exe() 
+    
+    if "--settings" in sys.argv or "--config" in sys.argv:
+        # Стартираме GUI за настройки
+        from config_gui import main as gui_main
+        gui_main()
+    else:
+        main_exe()

@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_55e9d01014ebdf769bf38da2563cb78e {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_55e9d01014ebdf769bf38da2563cb78e" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_55e9d01014ebdf769bf38da2563cb78e = L.map(
+                "map_55e9d01014ebdf769bf38da2563cb78e",
+                {
+                    center: [42.58900089279103, 23.019585183962906],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_fd70a87f180f571b7e60478e02b9a32d = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_fd70a87f180f571b7e60478e02b9a32d.addTo(map_55e9d01014ebdf769bf38da2563cb78e);
+        
+    
+            var marker_9eca44b3362f7904a7a4c91c73fb0ab9 = L.marker(
+                [42.695785029219415, 23.23165887245312],
+                {
+}
+            ).addTo(map_55e9d01014ebdf769bf38da2563cb78e);
+        
+    
+            var icon_5275bba7c52b815f7941c6fc6adfc60a = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "black",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_326cacef138c84e0a64066ba9a29b615 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_69b16010b4106cea362587bb04447fc8 = $(`<div id="html_69b16010b4106cea362587bb04447fc8" style="width: 100.0%; height: 100.0%;"><b>Главно депо</b></div>`)[0];
+                popup_326cacef138c84e0a64066ba9a29b615.setContent(html_69b16010b4106cea362587bb04447fc8);
+            
+        
+
+        marker_9eca44b3362f7904a7a4c91c73fb0ab9.bindPopup(popup_326cacef138c84e0a64066ba9a29b615)
+        ;
+
+        
+    
+    
+            marker_9eca44b3362f7904a7a4c91c73fb0ab9.bindTooltip(
+                `<div>
+                     Главно депо
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_9eca44b3362f7904a7a4c91c73fb0ab9.setIcon(icon_5275bba7c52b815f7941c6fc6adfc60a);
+            
+    
+            var circle_4cf532307a747a9d72aa88cb251b78ae = L.circle(
+                [42.69735652560932, 23.323809998750914],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.1, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 1700.0, "stroke": true, "weight": 3}
+            ).addTo(map_55e9d01014ebdf769bf38da2563cb78e);
+        
+    
+        var popup_2944903c99ad02a896e9431a6bb2ea46 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_12586a812c19822c14c9556de730c685 = $(`<div id="html_12586a812c19822c14c9556de730c685" style="width: 100.0%; height: 100.0%;"><b>Център зона</b><br>Радиус: 1.7 км</div>`)[0];
+                popup_2944903c99ad02a896e9431a6bb2ea46.setContent(html_12586a812c19822c14c9556de730c685);
+            
+        
+
+        circle_4cf532307a747a9d72aa88cb251b78ae.bindPopup(popup_2944903c99ad02a896e9431a6bb2ea46)
+        ;
+
+        
+    
+    
+            circle_4cf532307a747a9d72aa88cb251b78ae.bindTooltip(
+                `<div>
+                     Център зона
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_c03a9def474bffc796225f34a7fa77e5 = L.marker(
+                [42.69735652560932, 23.323809998750914],
+                {
+}
+            ).addTo(map_55e9d01014ebdf769bf38da2563cb78e);
+        
+    
+            var icon_7002e9f8e129e430691489005d0cb163 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "star",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_0ed9192f9c4d1cff9f58cdd604914aba = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_af7e315b8835fc63cd827b0706659d7b = $(`<div id="html_af7e315b8835fc63cd827b0706659d7b" style="width: 100.0%; height: 100.0%;"><b>Център</b><br>Координати: 42.697357, 23.323810<br>Радиус зона: 1.7 км</div>`)[0];
+                popup_0ed9192f9c4d1cff9f58cdd604914aba.setContent(html_af7e315b8835fc63cd827b0706659d7b);
+            
+        
+
+        marker_c03a9def474bffc796225f34a7fa77e5.bindPopup(popup_0ed9192f9c4d1cff9f58cdd604914aba)
+        ;
+
+        
+    
+    
+            marker_c03a9def474bffc796225f34a7fa77e5.bindTooltip(
+                `<div>
+                     Център
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c03a9def474bffc796225f34a7fa77e5.setIcon(icon_7002e9f8e129e430691489005d0cb163);
+            
+    
+            var feature_group_d5a5de5738bde6c45e3487d08cabfc30 = L.featureGroup(
+                {
+}
+            );
+        
+    
+            var marker_b5346e359f46d5d42dd0c2495cb1c4ee = L.marker(
+                [42.60119, 23.04058],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_def6774ddab486989b6305c661fc204d = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e1\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_d191713c76edce24389ad3882d615bb2 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e1ea802d51042d15d6fde485ab17ae2d = $(`<div id="html_e1ea802d51042d15d6fde485ab17ae2d" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ИРИС 60 ЕООД<br>                     <b>ID:</b> 1007416801<br>                     <b>Ред в маршрута:</b> #1<br>                     <b>Обем:</b> 6.00 ст.<br>                     <b>Координати:</b> 42.601190, 23.040580                 </div>                 </div>`)[0];
+                popup_d191713c76edce24389ad3882d615bb2.setContent(html_e1ea802d51042d15d6fde485ab17ae2d);
+            
+        
+
+        marker_b5346e359f46d5d42dd0c2495cb1c4ee.bindPopup(popup_d191713c76edce24389ad3882d615bb2)
+        ;
+
+        
+    
+    
+            marker_b5346e359f46d5d42dd0c2495cb1c4ee.bindTooltip(
+                `<div>
+                     #1: ИРИС 60 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_b5346e359f46d5d42dd0c2495cb1c4ee.setIcon(div_icon_def6774ddab486989b6305c661fc204d);
+            
+    
+            var marker_6fcf40eb142d4ab4999916ba0f02dac8 = L.marker(
+                [42.59167, 23.03573],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_c7c95527dfa905f7247856c36af106ee = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e2\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_fb6ca5473242fe967b8e3abf77ba0bcd = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_a57750a82e8d7ae93ba9dadcbc3feb7d = $(`<div id="html_a57750a82e8d7ae93ba9dadcbc3feb7d" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> СИЛВАНА - 91 - СИЛВИЯ ЗАХАРИЕВА ЕТ<br>                     <b>ID:</b> 1005696301<br>                     <b>Ред в маршрута:</b> #2<br>                     <b>Обем:</b> 3.00 ст.<br>                     <b>Координати:</b> 42.591670, 23.035730                 </div>                 </div>`)[0];
+                popup_fb6ca5473242fe967b8e3abf77ba0bcd.setContent(html_a57750a82e8d7ae93ba9dadcbc3feb7d);
+            
+        
+
+        marker_6fcf40eb142d4ab4999916ba0f02dac8.bindPopup(popup_fb6ca5473242fe967b8e3abf77ba0bcd)
+        ;
+
+        
+    
+    
+            marker_6fcf40eb142d4ab4999916ba0f02dac8.bindTooltip(
+                `<div>
+                     #2: СИЛВАНА - 91 - СИЛВИЯ ЗАХАРИЕВА ЕТ
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_6fcf40eb142d4ab4999916ba0f02dac8.setIcon(div_icon_c7c95527dfa905f7247856c36af106ee);
+            
+    
+            var marker_4281c5a8c875da444c1352c63933ee51 = L.marker(
+                [42.59678, 22.98764],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_c0db4edcc43a0c540fb77889d86bdbbf = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e3\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_c4877a105418613ec7276d78851557e4 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_a94397c09e622cac77d7fb2adb989ce2 = $(`<div id="html_a94397c09e622cac77d7fb2adb989ce2" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ДВД - 25 ЕООД<br>                     <b>ID:</b> 1007376001<br>                     <b>Ред в маршрута:</b> #3<br>                     <b>Обем:</b> 4.00 ст.<br>                     <b>Координати:</b> 42.596780, 22.987640                 </div>                 </div>`)[0];
+                popup_c4877a105418613ec7276d78851557e4.setContent(html_a94397c09e622cac77d7fb2adb989ce2);
+            
+        
+
+        marker_4281c5a8c875da444c1352c63933ee51.bindPopup(popup_c4877a105418613ec7276d78851557e4)
+        ;
+
+        
+    
+    
+            marker_4281c5a8c875da444c1352c63933ee51.bindTooltip(
+                `<div>
+                     #3: ДВД - 25 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_4281c5a8c875da444c1352c63933ee51.setIcon(div_icon_c0db4edcc43a0c540fb77889d86bdbbf);
+            
+    
+            var marker_4f8c434235696f46b4c9d146eb2d20a9 = L.marker(
+                [42.54416, 22.95727],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_882cc232a4a9788df5e12319ce4a5474 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e4\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_ec984bae989d50f590405cb22c2475a4 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ab59246423076dabeb92faf16cf9eec8 = $(`<div id="html_ab59246423076dabeb92faf16cf9eec8" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> АНИ ПЕТРОВА 21 ЕООД<br>                     <b>ID:</b> 1003949001<br>                     <b>Ред в маршрута:</b> #4<br>                     <b>Обем:</b> 10.00 ст.<br>                     <b>Координати:</b> 42.544160, 22.957270                 </div>                 </div>`)[0];
+                popup_ec984bae989d50f590405cb22c2475a4.setContent(html_ab59246423076dabeb92faf16cf9eec8);
+            
+        
+
+        marker_4f8c434235696f46b4c9d146eb2d20a9.bindPopup(popup_ec984bae989d50f590405cb22c2475a4)
+        ;
+
+        
+    
+    
+            marker_4f8c434235696f46b4c9d146eb2d20a9.bindTooltip(
+                `<div>
+                     #4: АНИ ПЕТРОВА 21 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_4f8c434235696f46b4c9d146eb2d20a9.setIcon(div_icon_882cc232a4a9788df5e12319ce4a5474);
+            
+    
+            var marker_ef0c6c50a66761e1f90b6033731d0078 = L.marker(
+                [42.54601, 22.95897],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_a2cb5a314305aeed4b870b07d92d5764 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e5\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_37132a88c1e1e114ac3d289c7cfcf9c2 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_c8d1e20fba50caa63c483082274bfd48 = $(`<div id="html_c8d1e20fba50caa63c483082274bfd48" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ГАБИ - 28 ЕООД<br>                     <b>ID:</b> 1005598201<br>                     <b>Ред в маршрута:</b> #5<br>                     <b>Обем:</b> 7.00 ст.<br>                     <b>Координати:</b> 42.546010, 22.958970                 </div>                 </div>`)[0];
+                popup_37132a88c1e1e114ac3d289c7cfcf9c2.setContent(html_c8d1e20fba50caa63c483082274bfd48);
+            
+        
+
+        marker_ef0c6c50a66761e1f90b6033731d0078.bindPopup(popup_37132a88c1e1e114ac3d289c7cfcf9c2)
+        ;
+
+        
+    
+    
+            marker_ef0c6c50a66761e1f90b6033731d0078.bindTooltip(
+                `<div>
+                     #5: ГАБИ - 28 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_ef0c6c50a66761e1f90b6033731d0078.setIcon(div_icon_a2cb5a314305aeed4b870b07d92d5764);
+            
+    
+            var marker_a63fd1ae0fd9da1ddf2a80a9bce37794 = L.marker(
+                [42.540294138988884, 22.966933293790817],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_19a821817eed4eb59778be42268ef9b2 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e6\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_d42ba709100f83d5a7ddfb462e0036f9 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6703396d80fb79829def91cb1dc6ff3e = $(`<div id="html_6703396d80fb79829def91cb1dc6ff3e" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> В.НИКОЛОВ-САБИНА МАРИЕТА ЕТ<br>                     <b>ID:</b> 1005202701<br>                     <b>Ред в маршрута:</b> #6<br>                     <b>Обем:</b> 20.00 ст.<br>                     <b>Координати:</b> 42.540294, 22.966933                 </div>                 </div>`)[0];
+                popup_d42ba709100f83d5a7ddfb462e0036f9.setContent(html_6703396d80fb79829def91cb1dc6ff3e);
+            
+        
+
+        marker_a63fd1ae0fd9da1ddf2a80a9bce37794.bindPopup(popup_d42ba709100f83d5a7ddfb462e0036f9)
+        ;
+
+        
+    
+    
+            marker_a63fd1ae0fd9da1ddf2a80a9bce37794.bindTooltip(
+                `<div>
+                     #6: В.НИКОЛОВ-САБИНА МАРИЕТА ЕТ
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_a63fd1ae0fd9da1ddf2a80a9bce37794.setIcon(div_icon_19a821817eed4eb59778be42268ef9b2);
+            
+    
+            var marker_6ae576a2542f1cfa777bdf40ea5ca256 = L.marker(
+                [42.54202, 22.97067],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_7ce9423eb08db4eb89f2e208111fbc5d = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e7\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_c88d5af9f75cda568d35b33d4cf225cb = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_20e6d0a7e18c8fd26fce801ac3e69387 = $(`<div id="html_20e6d0a7e18c8fd26fce801ac3e69387" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ГАРАНТ - С ЕООД<br>                     <b>ID:</b> 1005852002<br>                     <b>Ред в маршрута:</b> #7<br>                     <b>Обем:</b> 3.00 ст.<br>                     <b>Координати:</b> 42.542020, 22.970670                 </div>                 </div>`)[0];
+                popup_c88d5af9f75cda568d35b33d4cf225cb.setContent(html_20e6d0a7e18c8fd26fce801ac3e69387);
+            
+        
+
+        marker_6ae576a2542f1cfa777bdf40ea5ca256.bindPopup(popup_c88d5af9f75cda568d35b33d4cf225cb)
+        ;
+
+        
+    
+    
+            marker_6ae576a2542f1cfa777bdf40ea5ca256.bindTooltip(
+                `<div>
+                     #7: ГАРАНТ - С ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_6ae576a2542f1cfa777bdf40ea5ca256.setIcon(div_icon_7ce9423eb08db4eb89f2e208111fbc5d);
+            
+    
+            var marker_8627e5939fe9a4a8eb58f170b3a4d908 = L.marker(
+                [42.54705, 22.96648],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_8178a6830e8e71c15bf1c0acf8125392 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e8\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_5f32104ce00263d30c94b27f52554ac0 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_60e523fed3e6e3eeeeefa2220901dfd0 = $(`<div id="html_60e523fed3e6e3eeeeefa2220901dfd0" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> МИРЧОНИ ЕООД<br>                     <b>ID:</b> 1005381401<br>                     <b>Ред в маршрута:</b> #8<br>                     <b>Обем:</b> 4.00 ст.<br>                     <b>Координати:</b> 42.547050, 22.966480                 </div>                 </div>`)[0];
+                popup_5f32104ce00263d30c94b27f52554ac0.setContent(html_60e523fed3e6e3eeeeefa2220901dfd0);
+            
+        
+
+        marker_8627e5939fe9a4a8eb58f170b3a4d908.bindPopup(popup_5f32104ce00263d30c94b27f52554ac0)
+        ;
+
+        
+    
+    
+            marker_8627e5939fe9a4a8eb58f170b3a4d908.bindTooltip(
+                `<div>
+                     #8: МИРЧОНИ ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_8627e5939fe9a4a8eb58f170b3a4d908.setIcon(div_icon_8178a6830e8e71c15bf1c0acf8125392);
+            
+    
+            var marker_d44512cc4ac1611ada90a9304c2aef5e = L.marker(
+                [42.54762398127235, 22.965606674551964],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_4c4599091179e65ec3744127164f0e84 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e9\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_053e81bd694c21dd5a440d0331a9964f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d99a49500e2ea660ed51e916670839d6 = $(`<div id="html_d99a49500e2ea660ed51e916670839d6" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ЕКСПАНЖЪН ООД<br>                     <b>ID:</b> 1005698812<br>                     <b>Ред в маршрута:</b> #9<br>                     <b>Обем:</b> 10.00 ст.<br>                     <b>Координати:</b> 42.547624, 22.965607                 </div>                 </div>`)[0];
+                popup_053e81bd694c21dd5a440d0331a9964f.setContent(html_d99a49500e2ea660ed51e916670839d6);
+            
+        
+
+        marker_d44512cc4ac1611ada90a9304c2aef5e.bindPopup(popup_053e81bd694c21dd5a440d0331a9964f)
+        ;
+
+        
+    
+    
+            marker_d44512cc4ac1611ada90a9304c2aef5e.bindTooltip(
+                `<div>
+                     #9: ЕКСПАНЖЪН ООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d44512cc4ac1611ada90a9304c2aef5e.setIcon(div_icon_4c4599091179e65ec3744127164f0e84);
+            
+    
+            var marker_e8bf86cdf736e8cca95266192d48648c = L.marker(
+                [42.55261, 22.96604],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_01bd20ed1895c2f74ebde57e9db5a492 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e10\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_d8a224daf91179b6f5fb12f3d5bba0d6 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_aa1a93e5b3a9e24b4542a3c0f1a098dc = $(`<div id="html_aa1a93e5b3a9e24b4542a3c0f1a098dc" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> КАБО 2012 ЕООД<br>                     <b>ID:</b> 1007410101<br>                     <b>Ред в маршрута:</b> #10<br>                     <b>Обем:</b> 11.00 ст.<br>                     <b>Координати:</b> 42.552610, 22.966040                 </div>                 </div>`)[0];
+                popup_d8a224daf91179b6f5fb12f3d5bba0d6.setContent(html_aa1a93e5b3a9e24b4542a3c0f1a098dc);
+            
+        
+
+        marker_e8bf86cdf736e8cca95266192d48648c.bindPopup(popup_d8a224daf91179b6f5fb12f3d5bba0d6)
+        ;
+
+        
+    
+    
+            marker_e8bf86cdf736e8cca95266192d48648c.bindTooltip(
+                `<div>
+                     #10: КАБО 2012 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_e8bf86cdf736e8cca95266192d48648c.setIcon(div_icon_01bd20ed1895c2f74ebde57e9db5a492);
+            
+    
+            var marker_7300faaf583dceaf093e1f64ea5cc4c6 = L.marker(
+                [42.59617643232653, 23.023387088031768],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_56e1c2567095deaefdc723311a49f83b = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e11\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_24c62ee67a47d07694a5dfae83835a1f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_993dbf8f4a7863bf0109234fad2d14d6 = $(`<div id="html_993dbf8f4a7863bf0109234fad2d14d6" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ДИЕЛ ЕООД<br>                     <b>ID:</b> 1005202305<br>                     <b>Ред в маршрута:</b> #11<br>                     <b>Обем:</b> 28.00 ст.<br>                     <b>Координати:</b> 42.596176, 23.023387                 </div>                 </div>`)[0];
+                popup_24c62ee67a47d07694a5dfae83835a1f.setContent(html_993dbf8f4a7863bf0109234fad2d14d6);
+            
+        
+
+        marker_7300faaf583dceaf093e1f64ea5cc4c6.bindPopup(popup_24c62ee67a47d07694a5dfae83835a1f)
+        ;
+
+        
+    
+    
+            marker_7300faaf583dceaf093e1f64ea5cc4c6.bindTooltip(
+                `<div>
+                     #11: ДИЕЛ ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_7300faaf583dceaf093e1f64ea5cc4c6.setIcon(div_icon_56e1c2567095deaefdc723311a49f83b);
+            
+    
+            var marker_9c1754b4adc82d1e7e330c0716ea0c5c = L.marker(
+                [42.6014550888148, 23.02548699080944],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_e9804ad3cbf1063b7468cf22f73be286 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e12\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_51cbcca9d435407ad48b48a103e83ae7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_8187413952e6513513ebb7104faf099d = $(`<div id="html_8187413952e6513513ebb7104faf099d" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ДИЕЛ ЕООД<br>                     <b>ID:</b> 1005202302<br>                     <b>Ред в маршрута:</b> #12<br>                     <b>Обем:</b> 8.00 ст.<br>                     <b>Координати:</b> 42.601455, 23.025487                 </div>                 </div>`)[0];
+                popup_51cbcca9d435407ad48b48a103e83ae7.setContent(html_8187413952e6513513ebb7104faf099d);
+            
+        
+
+        marker_9c1754b4adc82d1e7e330c0716ea0c5c.bindPopup(popup_51cbcca9d435407ad48b48a103e83ae7)
+        ;
+
+        
+    
+    
+            marker_9c1754b4adc82d1e7e330c0716ea0c5c.bindTooltip(
+                `<div>
+                     #12: ДИЕЛ ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_9c1754b4adc82d1e7e330c0716ea0c5c.setIcon(div_icon_e9804ad3cbf1063b7468cf22f73be286);
+            
+    
+            var marker_fef33788f37f05009d2017f633e7376d = L.marker(
+                [42.60797, 23.03071],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_5385cbe4a5abd9b6f3a56a15c3cb60af = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e13\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_19a312e8d2470ebd246cd8f72b3eb122 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ef5f9de66989395340fd07363649ecb8 = $(`<div id="html_ef5f9de66989395340fd07363649ecb8" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> МЕРКУРИЙ- 78 -КИРИЛОВИ С-ИЕ СД<br>                     <b>ID:</b> 1007366401<br>                     <b>Ред в маршрута:</b> #13<br>                     <b>Обем:</b> 6.00 ст.<br>                     <b>Координати:</b> 42.607970, 23.030710                 </div>                 </div>`)[0];
+                popup_19a312e8d2470ebd246cd8f72b3eb122.setContent(html_ef5f9de66989395340fd07363649ecb8);
+            
+        
+
+        marker_fef33788f37f05009d2017f633e7376d.bindPopup(popup_19a312e8d2470ebd246cd8f72b3eb122)
+        ;
+
+        
+    
+    
+            marker_fef33788f37f05009d2017f633e7376d.bindTooltip(
+                `<div>
+                     #13: МЕРКУРИЙ- 78 -КИРИЛОВИ С-ИЕ СД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_fef33788f37f05009d2017f633e7376d.setIcon(div_icon_5385cbe4a5abd9b6f3a56a15c3cb60af);
+            
+    
+            var marker_2e32ecc51bcf8ff4b668e377d2e310a0 = L.marker(
+                [42.60778, 23.03077],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_79c659196b6d8ce19bf1dc139179f1ec = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e14\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_01c4563260e9ee64e859361e7cb6d107 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b6349ebfb0274b99677c11795f43abb1 = $(`<div id="html_b6349ebfb0274b99677c11795f43abb1" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> АЛНИЯ СД ЕООД<br>                     <b>ID:</b> 1005199802<br>                     <b>Ред в маршрута:</b> #14<br>                     <b>Обем:</b> 6.00 ст.<br>                     <b>Координати:</b> 42.607780, 23.030770                 </div>                 </div>`)[0];
+                popup_01c4563260e9ee64e859361e7cb6d107.setContent(html_b6349ebfb0274b99677c11795f43abb1);
+            
+        
+
+        marker_2e32ecc51bcf8ff4b668e377d2e310a0.bindPopup(popup_01c4563260e9ee64e859361e7cb6d107)
+        ;
+
+        
+    
+    
+            marker_2e32ecc51bcf8ff4b668e377d2e310a0.bindTooltip(
+                `<div>
+                     #14: АЛНИЯ СД ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2e32ecc51bcf8ff4b668e377d2e310a0.setIcon(div_icon_79c659196b6d8ce19bf1dc139179f1ec);
+            
+    
+            var marker_c834c97710a4e44668f95c5f0630ac79 = L.marker(
+                [42.60722, 23.03077],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_06f44639465d6d86f80aeb975411e0d9 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e15\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_bb1928d8abb2323a1a9fd7172a088d62 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7cb75252e82ae0de9d11f87de7acec6c = $(`<div id="html_7cb75252e82ae0de9d11f87de7acec6c" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ИВИ - 2015 ЕООД<br>                     <b>ID:</b> 1005849101<br>                     <b>Ред в маршрута:</b> #15<br>                     <b>Обем:</b> 7.00 ст.<br>                     <b>Координати:</b> 42.607220, 23.030770                 </div>                 </div>`)[0];
+                popup_bb1928d8abb2323a1a9fd7172a088d62.setContent(html_7cb75252e82ae0de9d11f87de7acec6c);
+            
+        
+
+        marker_c834c97710a4e44668f95c5f0630ac79.bindPopup(popup_bb1928d8abb2323a1a9fd7172a088d62)
+        ;
+
+        
+    
+    
+            marker_c834c97710a4e44668f95c5f0630ac79.bindTooltip(
+                `<div>
+                     #15: ИВИ - 2015 ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c834c97710a4e44668f95c5f0630ac79.setIcon(div_icon_06f44639465d6d86f80aeb975411e0d9);
+            
+    
+            var marker_2c1b7a5b357e73c1b6e5a4c7fed17ed6 = L.marker(
+                [42.60722, 23.03026],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_5dff2384c18655f527304881a1363db6 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e16\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_042482685cbdfb78701dd298ea4293fb = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f314cd684f5d4033c545a817f6f5e3ce = $(`<div id="html_f314cd684f5d4033c545a817f6f5e3ce" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> РАВАС 8 ООД<br>                     <b>ID:</b> 1005373201<br>                     <b>Ред в маршрута:</b> #16<br>                     <b>Обем:</b> 20.00 ст.<br>                     <b>Координати:</b> 42.607220, 23.030260                 </div>                 </div>`)[0];
+                popup_042482685cbdfb78701dd298ea4293fb.setContent(html_f314cd684f5d4033c545a817f6f5e3ce);
+            
+        
+
+        marker_2c1b7a5b357e73c1b6e5a4c7fed17ed6.bindPopup(popup_042482685cbdfb78701dd298ea4293fb)
+        ;
+
+        
+    
+    
+            marker_2c1b7a5b357e73c1b6e5a4c7fed17ed6.bindTooltip(
+                `<div>
+                     #16: РАВАС 8 ООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2c1b7a5b357e73c1b6e5a4c7fed17ed6.setIcon(div_icon_5dff2384c18655f527304881a1363db6);
+            
+    
+            var marker_801ff64da9ccaa79207179c4a054c616 = L.marker(
+                [42.60999, 23.03389],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_24fd2cc00545f7cf44543566be09dcba = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e17\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_d6ed02784b073a1b79720865f22099ea = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_26c53fa60cf7760268df51b2b3e722ec = $(`<div id="html_26c53fa60cf7760268df51b2b3e722ec" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> НИКАР ГРУП ЕООД<br>                     <b>ID:</b> 1005161904<br>                     <b>Ред в маршрута:</b> #17<br>                     <b>Обем:</b> 15.00 ст.<br>                     <b>Координати:</b> 42.609990, 23.033890                 </div>                 </div>`)[0];
+                popup_d6ed02784b073a1b79720865f22099ea.setContent(html_26c53fa60cf7760268df51b2b3e722ec);
+            
+        
+
+        marker_801ff64da9ccaa79207179c4a054c616.bindPopup(popup_d6ed02784b073a1b79720865f22099ea)
+        ;
+
+        
+    
+    
+            marker_801ff64da9ccaa79207179c4a054c616.bindTooltip(
+                `<div>
+                     #17: НИКАР ГРУП ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_801ff64da9ccaa79207179c4a054c616.setIcon(div_icon_24fd2cc00545f7cf44543566be09dcba);
+            
+    
+            var marker_c383dde94792fc3bbf73a96518f242c0 = L.marker(
+                [42.61277, 23.03615],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_c9d41260244361f499be47ae18105987 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e18\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_36fbad97678d59bfdc93440aaf089ce0 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_36a6c12548a77035e923082e4231e4f3 = $(`<div id="html_36a6c12548a77035e923082e4231e4f3" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> БРЕЗНИК 23 ООД<br>                     <b>ID:</b> 1007383101<br>                     <b>Ред в маршрута:</b> #18<br>                     <b>Обем:</b> 6.00 ст.<br>                     <b>Координати:</b> 42.612770, 23.036150                 </div>                 </div>`)[0];
+                popup_36fbad97678d59bfdc93440aaf089ce0.setContent(html_36a6c12548a77035e923082e4231e4f3);
+            
+        
+
+        marker_c383dde94792fc3bbf73a96518f242c0.bindPopup(popup_36fbad97678d59bfdc93440aaf089ce0)
+        ;
+
+        
+    
+    
+            marker_c383dde94792fc3bbf73a96518f242c0.bindTooltip(
+                `<div>
+                     #18: БРЕЗНИК 23 ООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c383dde94792fc3bbf73a96518f242c0.setIcon(div_icon_c9d41260244361f499be47ae18105987);
+            
+    
+            var marker_30e82f06d04ed7b902eb6ce0dfd9e85f = L.marker(
+                [42.61608, 23.0328],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_09e7b1114615e398f1b61b5d9a336d4b = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e19\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_04ff837d8250de1eaae558e7ba059a44 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_01ba074400c54dc0a0ea20de14fc0eb4 = $(`<div id="html_01ba074400c54dc0a0ea20de14fc0eb4" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ТЕСИ-АНЕСТИЕВИ ЕООД<br>                     <b>ID:</b> 1007953202<br>                     <b>Ред в маршрута:</b> #19<br>                     <b>Обем:</b> 5.00 ст.<br>                     <b>Координати:</b> 42.616080, 23.032800                 </div>                 </div>`)[0];
+                popup_04ff837d8250de1eaae558e7ba059a44.setContent(html_01ba074400c54dc0a0ea20de14fc0eb4);
+            
+        
+
+        marker_30e82f06d04ed7b902eb6ce0dfd9e85f.bindPopup(popup_04ff837d8250de1eaae558e7ba059a44)
+        ;
+
+        
+    
+    
+            marker_30e82f06d04ed7b902eb6ce0dfd9e85f.bindTooltip(
+                `<div>
+                     #19: ТЕСИ-АНЕСТИЕВИ ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_30e82f06d04ed7b902eb6ce0dfd9e85f.setIcon(div_icon_09e7b1114615e398f1b61b5d9a336d4b);
+            
+    
+            var marker_7e33dbdea7b279423aada9c47bd77015 = L.marker(
+                [42.6095, 23.03581],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_44f9d9ce135a04990fa1e9903203601b = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e20\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_3de762dfa7c606a7d891cc1d0214a784 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_bcf91abc05feea9f5df97790d0b09da7 = $(`<div id="html_bcf91abc05feea9f5df97790d0b09da7" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> САНДРИНА ЕООД<br>                     <b>ID:</b> 1005828602<br>                     <b>Ред в маршрута:</b> #20<br>                     <b>Обем:</b> 5.00 ст.<br>                     <b>Координати:</b> 42.609500, 23.035810                 </div>                 </div>`)[0];
+                popup_3de762dfa7c606a7d891cc1d0214a784.setContent(html_bcf91abc05feea9f5df97790d0b09da7);
+            
+        
+
+        marker_7e33dbdea7b279423aada9c47bd77015.bindPopup(popup_3de762dfa7c606a7d891cc1d0214a784)
+        ;
+
+        
+    
+    
+            marker_7e33dbdea7b279423aada9c47bd77015.bindTooltip(
+                `<div>
+                     #20: САНДРИНА ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_7e33dbdea7b279423aada9c47bd77015.setIcon(div_icon_44f9d9ce135a04990fa1e9903203601b);
+            
+    
+            var marker_95f291a1ae7b544adce0e047023f338a = L.marker(
+                [42.60649, 23.0327],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_e1868f70e31697a596a700185127fc2b = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e21\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_c9df4a87c5ed90e494990bb677721bc1 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_4127c41e8605998ab656c86211a8b41d = $(`<div id="html_4127c41e8605998ab656c86211a8b41d" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> МЕРИДИАН ПЛАНЕТ ЕООД<br>                     <b>ID:</b> 1007270801<br>                     <b>Ред в маршрута:</b> #21<br>                     <b>Обем:</b> 16.00 ст.<br>                     <b>Координати:</b> 42.606490, 23.032700                 </div>                 </div>`)[0];
+                popup_c9df4a87c5ed90e494990bb677721bc1.setContent(html_4127c41e8605998ab656c86211a8b41d);
+            
+        
+
+        marker_95f291a1ae7b544adce0e047023f338a.bindPopup(popup_c9df4a87c5ed90e494990bb677721bc1)
+        ;
+
+        
+    
+    
+            marker_95f291a1ae7b544adce0e047023f338a.bindTooltip(
+                `<div>
+                     #21: МЕРИДИАН ПЛАНЕТ ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_95f291a1ae7b544adce0e047023f338a.setIcon(div_icon_e1868f70e31697a596a700185127fc2b);
+            
+    
+            var marker_f72854b05797e21b5ca375bfaf708656 = L.marker(
+                [42.66596, 23.27222],
+                {
+}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            var div_icon_f58fcf118548ed6a71768eb10dc13918 = L.divIcon({
+  "html": "\n                \u003cdiv style=\"\n                    background-color: #FF0000;\n                    border: 3px solid white;\n                    border-radius: 50%;\n                    width: 30px;\n                    height: 30px;\n                    display: flex;\n                    justify-content: center;\n                    align-items: center;\n                    font-weight: bold;\n                    font-size: 14px;\n                    color: white;\n                    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);\n                \"\u003e22\u003c/div\u003e\n                ",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "popupAnchor": [0, -15],
+  "className": "empty",
+});
+        
+    
+        var popup_34707cde9c4861579531871049c9d026 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_0566399095848a9a0e2be4c064b0fbb7 = $(`<div id="html_0566399095848a9a0e2be4c064b0fbb7" style="width: 100.0%; height: 100.0%;">                 <div style="font-family: Arial, sans-serif;">                     <h4 style="margin: 0; color: #FF0000;">                         Автобус 1 - Вътрешен автобус                     </h4>                     <hr style="margin: 5px 0;">                     <b>Клиент:</b> ВЛАД АУТО ДРАЙВЪР ЕООД<br>                     <b>ID:</b> 1007207101<br>                     <b>Ред в маршрута:</b> #22<br>                     <b>Обем:</b> 6.00 ст.<br>                     <b>Координати:</b> 42.665960, 23.272220                 </div>                 </div>`)[0];
+                popup_34707cde9c4861579531871049c9d026.setContent(html_0566399095848a9a0e2be4c064b0fbb7);
+            
+        
+
+        marker_f72854b05797e21b5ca375bfaf708656.bindPopup(popup_34707cde9c4861579531871049c9d026)
+        ;
+
+        
+    
+    
+            marker_f72854b05797e21b5ca375bfaf708656.bindTooltip(
+                `<div>
+                     #22: ВЛАД АУТО ДРАЙВЪР ЕООД
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_f72854b05797e21b5ca375bfaf708656.setIcon(div_icon_f58fcf118548ed6a71768eb10dc13918);
+            
+    
+            var poly_line_e3e3f3614daf9ab055c08375ee8b7910 = L.polyline(
+                [[42.695829, 23.231663], [42.695855, 23.231125], [42.69588, 23.23061], [42.695882, 23.230559], [42.695895, 23.230298], [42.696074, 23.2303], [42.696113, 23.2303], [42.69615, 23.2303], [42.696309, 23.230301], [42.696808, 23.230305], [42.697994, 23.230302], [42.698433, 23.230301], [42.698996, 23.230304], [42.699086, 23.230304], [42.699167, 23.230305], [42.699319, 23.230305], [42.699439, 23.230306], [42.699611, 23.230307], [42.699849, 23.230308], [42.700161, 23.23031], [42.700302, 23.23031], [42.700453, 23.230311], [42.700543, 23.230312], [42.700653, 23.230312], [42.700775, 23.230313], [42.700887, 23.230313], [42.701005, 23.230314], [42.701115, 23.230314], [42.701207, 23.230315], [42.703632, 23.230327], [42.704092, 23.23033], [42.704394, 23.230331], [42.705178, 23.230345], [42.70535, 23.230344], [42.705698, 23.230345], [42.706313, 23.230346], [42.706358, 23.230346], [42.708938, 23.230362], [42.708986, 23.230362], [42.709414, 23.230359], [42.710148, 23.230378], [42.710918, 23.230456], [42.711116, 23.230495], [42.711309, 23.230557], [42.711437, 23.230614], [42.711583, 23.230731], [42.711718, 23.230843], [42.71186, 23.231009], [42.711999, 23.231187], [42.712103, 23.231425], [42.712199, 23.231566], [42.71221, 23.23158], [42.712343, 23.23175], [42.712544, 23.231929], [42.71268, 23.232026], [42.712794, 23.232079], [42.712955, 23.232137], [42.713093, 23.232164], [42.713231, 23.232168], [42.713373, 23.23216], [42.713502, 23.23213], [42.713585, 23.2321], [42.713701, 23.232051], [42.713801, 23.23198], [42.713893, 23.231896], [42.714009, 23.231759], [42.714039, 23.231713], [42.71411, 23.231583], [42.714178, 23.231386], [42.714212, 23.231235], [42.714219, 23.231148], [42.714227, 23.231066], [42.714237, 23.2309], [42.714233, 23.230696], [42.714218, 23.23053], [42.714193, 23.230338], [42.714183, 23.23029], [42.714141, 23.230138], [42.714074, 23.229925], [42.713986, 23.229731], [42.713883, 23.229566], [42.713781, 23.229428], [42.7137, 23.229329], [42.713588, 23.229226], [42.713468, 23.229141], [42.713341, 23.229062], [42.713208, 23.229], [42.71309, 23.228958], [42.712922, 23.228929], [42.712732, 23.228928], [42.712577, 23.228834], [42.712471, 23.228762], [42.712365, 23.228662], [42.71228, 23.228543], [42.712188, 23.228379], [42.712099, 23.228147], [42.711775, 23.227187], [42.711536, 23.22645], [42.711371, 23.225901], [42.711207, 23.225296], [42.710736, 23.223033], [42.710548, 23.222216], [42.710343, 23.221367], [42.710263, 23.221009], [42.710162, 23.220636], [42.710053, 23.220263], [42.709943, 23.219913], [42.70983, 23.219542], [42.709777, 23.219385], [42.709745, 23.219293], [42.709592, 23.218852], [42.70959, 23.218849], [42.709529, 23.218685], [42.709331, 23.218185], [42.709183, 23.217826], [42.709037, 23.217495], [42.708889, 23.217181], [42.708739, 23.216869], [42.708564, 23.216517], [42.7084, 23.216212], [42.708165, 23.215792], [42.707967, 23.215454], [42.707764, 23.215132], [42.707591, 23.214857], [42.707394, 23.214557], [42.707184, 23.214262], [42.706966, 23.213967], [42.706681, 23.213553], [42.706356, 23.213162], [42.706025, 23.21278], [42.705693, 23.212422], [42.705442, 23.212204], [42.705075, 23.211831], [42.704503, 23.21126], [42.704022, 23.210771], [42.703709, 23.210457], [42.703616, 23.210364], [42.70334, 23.210084], [42.703111, 23.209849], [42.702799, 23.209544], [42.702447, 23.209171], [42.702185, 23.208909], [42.701991, 23.208715], [42.701602, 23.208321], [42.701089, 23.207807], [42.700342, 23.207087], [42.699625, 23.206332], [42.699242, 23.205928], [42.698907, 23.205559], [42.698503, 23.20507], [42.698107, 23.204519], [42.697769, 23.204064], [42.697477, 23.203642], [42.697085, 23.203051], [42.696871, 23.202722], [42.696791, 23.202599], [42.696517, 23.202145], [42.696156, 23.201516], [42.695898, 23.201037], [42.69574, 23.200723], [42.69551, 23.200242], [42.695279, 23.199746], [42.695065, 23.199246], [42.694924, 23.198908], [42.694724, 23.198393], [42.694593, 23.198051], [42.694399, 23.197517], [42.694338, 23.197345], [42.694212, 23.196991], [42.694037, 23.196452], [42.693928, 23.196086], [42.693826, 23.195725], [42.693684, 23.195183], [42.693428, 23.194115], [42.693349, 23.193673], [42.693244, 23.193125], [42.693158, 23.192677], [42.693017, 23.191862], [42.692892, 23.19093], [42.69285, 23.190445], [42.692775, 23.189302], [42.692716, 23.188343], [42.692698, 23.187945], [42.692491, 23.179744], [42.692398, 23.176067], [42.692365, 23.174514], [42.692307, 23.171988], [42.692274, 23.169519], [42.692257, 23.168894], [42.69225, 23.168583], [42.692236, 23.168177], [42.692213, 23.167777], [42.692194, 23.167551], [42.692176, 23.167326], [42.692138, 23.16693], [42.692085, 23.166493], [42.692042, 23.16616], [42.691983, 23.165781], [42.691918, 23.1654], [42.691841, 23.165013], [42.691756, 23.164648], [42.691648, 23.164203], [42.691567, 23.163881], [42.691474, 23.163521], [42.69137, 23.16316], [42.691258, 23.162802], [42.691138, 23.162437], [42.691015, 23.162093], [42.690882, 23.161729], [42.690743, 23.161373], [42.690532, 23.160863], [42.690382, 23.160531], [42.690228, 23.160201], [42.690066, 23.159879], [42.689814, 23.159409], [42.689548, 23.158957], [42.689281, 23.158515], [42.689005, 23.158092], [42.688899, 23.157941], [42.688608, 23.15755], [42.688404, 23.157283], [42.68822, 23.157053], [42.688147, 23.156974], [42.688041, 23.156857], [42.68775, 23.156544], [42.687516, 23.156298], [42.687383, 23.15617], [42.687217, 23.156001], [42.68692, 23.155738], [42.686544, 23.155425], [42.686146, 23.155106], [42.685734, 23.154816], [42.685327, 23.154554], [42.684929, 23.154318], [42.684542, 23.154131], [42.684098, 23.153918], [42.683639, 23.153722], [42.683243, 23.15358], [42.682893, 23.153467], [42.682701, 23.153405], [42.682401, 23.15331], [42.681592, 23.153059], [42.678515, 23.152344], [42.677511, 23.152097], [42.677072, 23.151995], [42.676649, 23.151891], [42.676234, 23.151781], [42.675307, 23.151535], [42.675014, 23.151461], [42.674703, 23.151374], [42.674226, 23.151244], [42.673927, 23.151169], [42.673372, 23.151024], [42.672968, 23.150932], [42.672343, 23.150784], [42.671385, 23.150559], [42.671003, 23.150468], [42.670917, 23.150447], [42.670476, 23.150329], [42.669608, 23.150108], [42.669053, 23.149968], [42.668504, 23.149819], [42.668082, 23.149657], [42.667366, 23.149376], [42.667064, 23.149226], [42.666716, 23.149027], [42.66632, 23.148771], [42.665892, 23.14846], [42.665646, 23.14826], [42.665386, 23.148036], [42.665058, 23.147721], [42.664831, 23.147487], [42.664491, 23.147133], [42.66427, 23.146874], [42.66407, 23.146617], [42.663853, 23.146336], [42.663648, 23.14605], [42.663407, 23.145677], [42.663231, 23.145373], [42.662975, 23.144905], [42.662813, 23.144603], [42.662652, 23.144259], [42.662507, 23.143934], [42.662374, 23.143595], [42.662242, 23.143245], [42.662132, 23.142894], [42.662022, 23.142539], [42.661862, 23.142012], [42.661659, 23.141302], [42.66152, 23.140769], [42.66129, 23.139832], [42.661225, 23.139574], [42.661147, 23.139244], [42.660973, 23.138441], [42.660735, 23.137609], [42.660537, 23.136933], [42.660354, 23.13641], [42.660092, 23.135759], [42.659952, 23.13543], [42.659523, 23.13453], [42.659474, 23.134441], [42.65934, 23.134201], [42.659132, 23.133856], [42.658866, 23.133473], [42.658625, 23.133145], [42.658361, 23.13282], [42.658105, 23.132524], [42.657756, 23.132166], [42.657418, 23.131839], [42.657053, 23.131529], [42.656531, 23.131148], [42.656032, 23.130834], [42.655652, 23.130624], [42.655268, 23.130458], [42.65512, 23.130399], [42.654717, 23.130264], [42.654448, 23.130182], [42.654156, 23.130118], [42.653879, 23.130065], [42.653444, 23.130008], [42.653158, 23.129987], [42.652873, 23.129991], [42.652594, 23.129996], [42.652304, 23.130019], [42.651883, 23.130084], [42.651612, 23.130138], [42.651525, 23.130158], [42.651363, 23.130196], [42.650901, 23.130337], [42.65049, 23.130473], [42.648698, 23.131129], [42.648288, 23.131263], [42.648012, 23.131342], [42.647576, 23.13144], [42.647289, 23.13149], [42.647003, 23.131521], [42.6467, 23.131541], [42.646416, 23.131541], [42.646205, 23.131532], [42.645984, 23.131518], [42.645662, 23.131476], [42.64536, 23.131419], [42.645059, 23.131351], [42.644625, 23.131225], [42.644207, 23.131067], [42.644072, 23.131018], [42.643808, 23.130894], [42.643549, 23.130759], [42.643443, 23.130702], [42.642783, 23.130305], [42.63578, 23.125872], [42.63549, 23.125706], [42.635242, 23.125575], [42.634982, 23.125443], [42.634725, 23.125334], [42.63464, 23.125301], [42.634447, 23.125225], [42.634158, 23.125141], [42.633884, 23.125067], [42.63358, 23.124999], [42.633281, 23.124949], [42.632986, 23.12491], [42.632125, 23.12489], [42.631963, 23.124905], [42.631782, 23.124915], [42.631481, 23.124953], [42.631184, 23.125005], [42.630746, 23.125122], [42.63046, 23.125217], [42.630178, 23.12533], [42.629896, 23.125456], [42.629496, 23.125662], [42.629125, 23.125889], [42.628944, 23.126009], [42.628696, 23.126181], [42.628308, 23.126472], [42.628163, 23.126612], [42.627889, 23.126875], [42.62756, 23.127245], [42.626837, 23.128187], [42.626199, 23.12916], [42.625998, 23.129525], [42.62584, 23.129877], [42.625695, 23.130254], [42.625586, 23.130532], [42.625496, 23.130783], [42.625271, 23.131404], [42.625013, 23.132184], [42.624794, 23.132872], [42.624624, 23.133408], [42.624378, 23.134107], [42.624169, 23.134619], [42.624017, 23.134948], [42.623896, 23.135206], [42.623766, 23.135438], [42.623516, 23.1359], [42.623329, 23.136214], [42.62316, 23.136468], [42.622896, 23.136828], [42.622682, 23.137086], [42.622426, 23.137378], [42.622191, 23.137608], [42.621857, 23.137921], [42.621611, 23.138138], [42.621393, 23.138313], [42.621353, 23.138345], [42.621124, 23.138512], [42.620845, 23.138703], [42.620607, 23.138859], [42.620357, 23.139001], [42.620079, 23.139133], [42.619878, 23.139232], [42.619522, 23.139375], [42.619209, 23.13948], [42.618833, 23.139588], [42.618538, 23.139644], [42.618244, 23.139673], [42.617975, 23.139702], [42.617696, 23.1397], [42.617393, 23.139694], [42.617094, 23.139677], [42.61681, 23.139641], [42.616404, 23.139552], [42.615972, 23.139439], [42.615551, 23.139306], [42.615268, 23.13919], [42.614994, 23.139067], [42.614585, 23.138854], [42.614324, 23.138691], [42.61407, 23.138522], [42.613819, 23.138338], [42.613573, 23.138134], [42.613341, 23.137924], [42.613227, 23.13782], [42.612975, 23.137575], [42.612651, 23.137216], [42.612443, 23.136953], [42.612248, 23.136701], [42.611865, 23.136136], [42.611134, 23.134953], [42.610043, 23.133187], [42.609385, 23.13215], [42.608715, 23.131125], [42.608423, 23.130712], [42.608222, 23.130433], [42.607811, 23.129887], [42.607495, 23.129488], [42.607175, 23.129107], [42.606851, 23.128726], [42.606757, 23.128615], [42.60643, 23.128264], [42.606209, 23.128043], [42.605975, 23.12781], [42.605591, 23.127449], [42.605143, 23.127046], [42.604702, 23.126672], [42.60426, 23.126279], [42.60415, 23.126186], [42.603879, 23.125942], [42.60351, 23.125523], [42.60326, 23.125175], [42.602765, 23.124456], [42.602653, 23.12434], [42.602523, 23.124235], [42.602387, 23.124178], [42.602246, 23.124156], [42.602057, 23.124167], [42.60165, 23.124217], [42.601526, 23.124216], [42.601417, 23.12419], [42.601321, 23.12414], [42.601218, 23.12404], [42.601128, 23.12392], [42.601041, 23.123752], [42.600977, 23.123634], [42.600857, 23.123419], [42.600797, 23.123281], [42.600726, 23.12316], [42.600679, 23.122998], [42.600643, 23.122838], [42.60063, 23.122692], [42.600637, 23.122517], [42.600652, 23.122381], [42.600675, 23.122249], [42.600715, 23.122068], [42.600752, 23.121872], [42.600779, 23.121666], [42.600793, 23.121464], [42.60077, 23.120219], [42.600773, 23.119989], [42.600785, 23.119664], [42.600811, 23.119295], [42.60085, 23.118849], [42.600894, 23.118463], [42.600964, 23.117981], [42.601371, 23.115711], [42.601474, 23.115152], [42.601984, 23.112526], [42.602218, 23.111249], [42.602392, 23.110314], [42.60245, 23.109843], [42.602493, 23.10923], [42.602589, 23.10562], [42.602603, 23.105233], [42.603179, 23.091615], [42.603425, 23.08572], [42.603477, 23.084513], [42.603501, 23.083921], [42.603522, 23.083433], [42.603642, 23.080885], [42.603727, 23.079772], [42.603752, 23.079396], [42.603921, 23.077733], [42.604221, 23.074791], [42.604266, 23.074193], [42.604261, 23.073744], [42.60424, 23.073251], [42.604175, 23.072714], [42.604079, 23.072117], [42.603894, 23.071155], [42.603854, 23.070884], [42.603824, 23.070491], [42.603811, 23.070019], [42.603826, 23.069655], [42.60412, 23.064396], [42.604145, 23.062498], [42.604105, 23.061387], [42.603897, 23.059128], [42.603796, 23.05792], [42.603544, 23.054428], [42.603488, 23.053571], [42.603439, 23.052621], [42.603411, 23.051954], [42.603325, 23.049892], [42.603361, 23.049306], [42.603387, 23.04882], [42.603433, 23.048412], [42.603732, 23.046737], [42.603777, 23.046457], [42.603809, 23.046171], [42.603839, 23.045722], [42.60382, 23.04524], [42.603763, 23.044831], [42.603736, 23.044722], [42.603699, 23.044605], [42.603634, 23.044447], [42.603549, 23.044343], [42.603423, 23.044268], [42.603345, 23.044244], [42.603247, 23.044247], [42.603189, 23.044194], [42.603154, 23.044144], [42.603135, 23.044087], [42.603132, 23.044015], [42.603155, 23.043874], [42.6036, 23.042578], [42.603719, 23.042225], [42.603819, 23.041854], [42.603821, 23.04181], [42.60383, 23.041604], [42.603776, 23.041185], [42.602726, 23.041041], [42.602602, 23.041032], [42.602203, 23.040974], [42.601254, 23.040723], [42.601266, 23.040593], [42.601319, 23.040033], [42.600881, 23.039588], [42.600291, 23.03899], [42.599962, 23.038636], [42.599702, 23.038248], [42.599291, 23.037416], [42.598895, 23.036644], [42.598776, 23.036744], [42.598377, 23.03602], [42.597926, 23.035368], [42.597185, 23.036034], [42.596983, 23.036227], [42.596617, 23.036395], [42.595791, 23.036779], [42.595159, 23.037083], [42.594591, 23.037226], [42.594238, 23.037242], [42.594135, 23.037237], [42.59399, 23.037229], [42.593761, 23.03719], [42.593309, 23.037084], [42.593182, 23.037032], [42.592474, 23.036719], [42.592224, 23.03659], [42.592058, 23.036458], [42.59182, 23.036133], [42.591596, 23.035832], [42.591384, 23.035547], [42.591814, 23.034912], [42.592205, 23.034579], [42.592618, 23.034235], [42.592812, 23.034067], [42.592688, 23.033824], [42.592659, 23.03364], [42.592666, 23.033486], [42.592692, 23.033402], [42.592769, 23.033233], [42.592926, 23.033074], [42.593123, 23.03294], [42.59324, 23.032865], [42.593043, 23.032182], [42.59473, 23.031362], [42.594885, 23.031294], [42.59499, 23.031281], [42.595191, 23.031362], [42.595223, 23.031221], [42.59541, 23.030522], [42.595421, 23.030481], [42.595593, 23.029952], [42.595729, 23.029537], [42.595871, 23.029333], [42.596021, 23.029247], [42.596168, 23.02917], [42.596354, 23.029073], [42.596351, 23.028256], [42.596338, 23.027715], [42.596354, 23.026714], [42.596352, 23.026613], [42.596326, 23.026534], [42.596277, 23.026517], [42.596163, 23.026586], [42.595754, 23.026089], [42.595807, 23.026056], [42.595865, 23.02605], [42.595915, 23.026069], [42.595957, 23.0261], [42.596017, 23.026104], [42.596069, 23.026095], [42.596109, 23.026043], [42.596164, 23.025898], [42.596096, 23.025838], [42.595812, 23.025643], [42.595704, 23.025556], [42.595659, 23.025475], [42.596002, 23.024988], [42.595912, 23.02493], [42.595334, 23.02438], [42.594908, 23.023897], [42.594771, 23.023636], [42.594348, 23.022937], [42.594172, 23.022621], [42.594025, 23.022374], [42.593885, 23.022162], [42.593731, 23.021974], [42.593533, 23.021757], [42.593298, 23.021512], [42.593087, 23.021299], [42.592978, 23.021189], [42.592871, 23.021068], [42.592749, 23.020916], [42.592648, 23.020764], [42.592523, 23.020563], [42.592405, 23.020337], [42.592325, 23.020148], [42.592244, 23.019927], [42.592172, 23.019696], [42.592111, 23.01944], [42.592066, 23.019155], [42.592049, 23.01889], [42.592054, 23.018557], [42.592084, 23.018161], [42.592129, 23.017605], [42.592191, 23.016958], [42.592236, 23.016314], [42.592245, 23.016024], [42.59225, 23.015809], [42.592249, 23.015482], [42.592232, 23.013804], [42.59224, 23.012326], [42.592245, 23.011397], [42.592253, 23.010826], [42.592286, 23.010175], [42.59233, 23.009676], [42.592395, 23.009183], [42.592472, 23.008648], [42.592573, 23.007939], [42.592631, 23.007456], [42.592661, 23.006978], [42.592661, 23.006296], [42.592672, 23.005333], [42.59269, 23.004569], [42.592698, 23.004189], [42.592735, 23.001904], [42.592742, 23.001563], [42.592762, 23.001256], [42.592803, 23.000925], [42.592857, 23.000582], [42.592928, 23.000255], [42.59302, 22.999932], [42.593647, 22.997858], [42.593738, 22.997603], [42.593876, 22.997282], [42.594031, 22.997004], [42.594233, 22.996715], [42.595202, 22.995573], [42.595353, 22.995381], [42.595513, 22.995124], [42.595672, 22.994803], [42.595792, 22.994484], [42.595897, 22.994127], [42.595952, 22.993789], [42.595988, 22.993403], [42.595994, 22.993002], [42.595959, 22.992613], [42.595897, 22.992277], [42.594899, 22.986846], [42.594911, 22.986672], [42.594944, 22.986575], [42.594993, 22.986507], [42.595067, 22.986442], [42.595848, 22.986252], [42.596141, 22.986717], [42.596643, 22.987512], [42.596943, 22.988014], [42.597125, 22.988516], [42.597275, 22.989098], [42.597291, 22.989469], [42.596461, 22.989739], [42.597291, 22.989469], [42.597275, 22.989098], [42.597125, 22.988516], [42.596943, 22.988014], [42.596744, 22.98768], [42.596643, 22.987512], [42.596141, 22.986717], [42.595848, 22.986252], [42.595067, 22.986442], [42.594971, 22.986435], [42.594921, 22.986423], [42.594869, 22.986383], [42.594823, 22.986302], [42.594773, 22.986184], [42.593872, 22.981279], [42.593775, 22.980727], [42.59362, 22.979886], [42.5935, 22.979435], [42.59336, 22.979033], [42.593182, 22.978596], [42.592461, 22.976955], [42.591724, 22.975309], [42.591146, 22.974052], [42.591068, 22.973881], [42.590176, 22.97183], [42.589981, 22.971241], [42.589794, 22.970592], [42.589587, 22.96981], [42.588691, 22.966668], [42.588375, 22.965514], [42.588085, 22.964685], [42.587851, 22.964148], [42.587592, 22.963685], [42.586637, 22.962435], [42.585165, 22.960637], [42.584528, 22.959884], [42.584313, 22.959682], [42.584057, 22.959494], [42.583727, 22.959332], [42.58339, 22.959232], [42.583171, 22.959213], [42.582926, 22.959224], [42.58266, 22.959272], [42.582486, 22.959326], [42.582251, 22.959425], [42.581342, 22.959929], [42.581078, 22.960055], [42.580833, 22.960117], [42.580523, 22.960144], [42.580201, 22.960103], [42.579877, 22.959988], [42.579514, 22.959798], [42.579166, 22.959503], [42.578878, 22.95917], [42.578658, 22.958821], [42.578224, 22.957842], [42.577902, 22.957201], [42.577661, 22.956837], [42.577349, 22.956525], [42.576999, 22.956271], [42.576573, 22.956067], [42.576288, 22.955984], [42.576037, 22.955946], [42.575708, 22.955949], [42.575364, 22.956021], [42.574805, 22.956257], [42.573033, 22.957131], [42.571726, 22.95788], [42.570453, 22.958656], [42.568526, 22.959965], [42.567004, 22.961155], [42.566404, 22.961603], [42.565914, 22.961988], [42.565533, 22.962286], [42.565225, 22.962506], [42.565152, 22.962558], [42.564549, 22.962941], [42.564079, 22.963135], [42.558273, 22.964629], [42.555477, 22.965106], [42.555038, 22.96518], [42.5541, 22.965338], [42.553536, 22.965432], [42.553035, 22.965516], [42.55284, 22.965548], [42.551849, 22.965714], [42.551817, 22.965713], [42.551698, 22.965711], [42.55142, 22.965707], [42.551352, 22.965706], [42.551152, 22.965661], [42.55101, 22.965629], [42.550605, 22.965467], [42.550131, 22.965131], [42.549203, 22.964349], [42.549091, 22.964271], [42.548988, 22.964199], [42.5489, 22.964137], [42.548811, 22.964002], [42.54918, 22.962837], [42.548591, 22.961453], [42.548242, 22.960568], [42.547929, 22.959573], [42.547874, 22.959436], [42.547447, 22.958578], [42.547385, 22.95856], [42.546544, 22.958435], [42.546331, 22.958406], [42.545655, 22.958285], [42.54557, 22.958256], [42.544298, 22.957372], [42.544157, 22.957278], [42.543884, 22.957096], [42.544048, 22.95666], [42.544299, 22.955993], [42.544338, 22.955961], [42.544396, 22.955938], [42.544574, 22.956388], [42.544682, 22.956496], [42.544787, 22.956577], [42.545473, 22.957035], [42.546094, 22.957411], [42.546463, 22.95747], [42.54636, 22.958084], [42.546331, 22.958406], [42.546544, 22.958435], [42.546084, 22.959069], [42.545797, 22.959463], [42.545092, 22.960163], [42.545048, 22.960222], [42.545005, 22.960294], [42.544463, 22.961625], [42.544363, 22.961694], [42.544318, 22.961722], [42.544292, 22.961745], [42.544269, 22.961768], [42.544247, 22.961794], [42.544231, 22.961815], [42.544216, 22.961841], [42.544204, 22.961867], [42.544196, 22.961897], [42.544194, 22.961928], [42.544193, 22.961968], [42.544262, 22.962853], [42.544301, 22.963322], [42.544326, 22.963597], [42.544369, 22.96391], [42.544371, 22.964118], [42.54437, 22.964225], [42.544349, 22.964321], [42.544252, 22.964535], [42.543982, 22.965086], [42.543629, 22.965755], [42.543555, 22.965882], [42.543496, 22.965985], [42.54334, 22.966241], [42.543244, 22.966338], [42.5431, 22.966505], [42.542979, 22.966617], [42.542868, 22.966692], [42.542729, 22.966772], [42.542615, 22.966828], [42.542482, 22.966897], [42.541676, 22.967275], [42.540986, 22.967598], [42.540725, 22.96772], [42.540384, 22.967983], [42.540302, 22.968046], [42.540222, 22.968108], [42.539675, 22.968758], [42.53954, 22.968237], [42.539268, 22.967122], [42.540199, 22.966732], [42.540248, 22.966952], [42.540429, 22.967769], [42.53954, 22.968237], [42.539675, 22.968758], [42.540222, 22.968108], [42.540302, 22.968046], [42.540695, 22.96874], [42.541177, 22.969513], [42.541509, 22.970092], [42.541936, 22.9708], [42.542032, 22.970689], [42.5429, 22.969679], [42.54339, 22.9702], [42.543908, 22.969432], [42.543934, 22.968679], [42.543926, 22.968043], [42.544388, 22.967858], [42.54494, 22.967391], [42.54505, 22.967269], [42.545104, 22.967295], [42.545154, 22.96731], [42.545271, 22.967324], [42.545485, 22.967281], [42.545917, 22.967208], [42.546071, 22.967226], [42.546083, 22.967185], [42.546115, 22.967069], [42.546125, 22.967038], [42.54621, 22.966873], [42.546453, 22.966517], [42.546812, 22.965999], [42.547143, 22.966276], [42.547293, 22.966402], [42.547485, 22.966508], [42.547961, 22.966781], [42.547943, 22.966642], [42.547743, 22.965639], [42.547502, 22.965448], [42.546995, 22.964952], [42.546852, 22.964812], [42.546703, 22.964624], [42.546706, 22.964527], [42.546767, 22.964444], [42.547038, 22.964431], [42.547167, 22.964425], [42.547293, 22.964417], [42.547333, 22.964616], [42.547502, 22.965448], [42.547644, 22.965561], [42.547743, 22.965639], [42.547815, 22.965632], [42.548301, 22.965495], [42.548593, 22.965398], [42.548637, 22.965387], [42.548949, 22.965307], [42.548937, 22.965184], [42.549044, 22.965066], [42.54927, 22.964937], [42.549335, 22.964949], [42.549622, 22.964864], [42.550081, 22.96525], [42.550567, 22.965595], [42.550987, 22.965763], [42.551351, 22.965842], [42.551353, 22.966322], [42.55137, 22.966815], [42.55188, 22.967069], [42.552369, 22.967325], [42.552591, 22.967335], [42.552733, 22.967195], [42.552844, 22.967029], [42.552907, 22.966884], [42.552946, 22.966707], [42.552962, 22.96653], [42.55295, 22.966294], [42.552934, 22.966101], [42.552855, 22.966015], [42.552611, 22.966051], [42.552156, 22.966117], [42.552191, 22.966691], [42.55188, 22.967069], [42.55137, 22.966815], [42.551353, 22.966322], [42.551351, 22.965842], [42.551416, 22.965844], [42.551855, 22.965851], [42.553039, 22.965653], [42.553543, 22.965569], [42.555047, 22.965312], [42.55508, 22.965306], [42.555487, 22.965237], [42.558283, 22.964759], [42.564103, 22.963269], [42.564248, 22.963209], [42.564586, 22.96307], [42.564948, 22.962839], [42.565197, 22.962681], [42.565582, 22.962407], [42.565756, 22.96227], [42.566454, 22.961723], [42.567054, 22.961275], [42.568574, 22.960086], [42.570496, 22.958781], [42.571773, 22.957998], [42.573077, 22.957247], [42.574841, 22.956381], [42.575398, 22.956153], [42.575718, 22.956086], [42.576036, 22.956086], [42.57628, 22.95612], [42.576551, 22.956209], [42.57697, 22.956407], [42.577294, 22.956641], [42.577592, 22.956957], [42.577821, 22.95729], [42.578133, 22.957934], [42.578575, 22.958897], [42.578809, 22.959283], [42.579103, 22.959615], [42.579468, 22.959913], [42.579834, 22.96012], [42.580178, 22.960238], [42.580511, 22.960289], [42.580853, 22.960246], [42.581118, 22.960174], [42.581379, 22.960039], [42.582285, 22.959554], [42.582508, 22.959462], [42.582685, 22.959411], [42.582968, 22.959366], [42.583179, 22.959363], [42.583381, 22.959393], [42.583689, 22.959473], [42.584005, 22.959628], [42.584253, 22.959806], [42.584467, 22.959991], [42.585122, 22.960731], [42.586632, 22.962604], [42.587508, 22.963793], [42.587757, 22.964232], [42.587995, 22.96477], [42.588274, 22.965605], [42.588591, 22.966723], [42.589489, 22.969861], [42.589696, 22.970647], [42.589889, 22.971315], [42.589975, 22.971582], [42.590967, 22.973916], [42.591043, 22.974089], [42.592379, 22.97705], [42.593122, 22.978707], [42.593279, 22.979099], [42.59341, 22.979495], [42.593533, 22.979935], [42.59366, 22.980599], [42.593692, 22.980756], [42.593785, 22.98131], [42.594624, 22.985952], [42.594705, 22.986386], [42.595369, 22.989954], [42.595842, 22.992506], [42.595882, 22.992815], [42.595904, 22.993162], [42.595896, 22.993512], [42.595873, 22.993748], [42.595835, 22.994023], [42.595756, 22.994318], [42.595642, 22.994653], [42.595486, 22.994969], [42.595307, 22.995257], [42.595191, 22.995425], [42.594728, 22.995964], [42.594213, 22.99657], [42.594074, 22.996752], [42.593927, 22.99697], [42.593797, 22.997209], [42.593705, 22.99743], [42.593593, 22.997743], [42.593164, 22.999132], [42.592879, 23.000054], [42.592788, 23.000433], [42.59272, 23.000803], [42.592678, 23.001166], [42.592653, 23.001511], [42.592634, 23.001876], [42.592551, 23.006297], [42.59255, 23.006541], [42.59254, 23.00698], [42.592533, 23.007302], [42.592516, 23.007522], [42.592472, 23.007897], [42.592428, 23.008257], [42.592316, 23.008984], [42.592227, 23.009631], [42.59218, 23.010152], [42.592156, 23.010644], [42.592142, 23.011071], [42.592138, 23.011584], [42.592124, 23.012522], [42.592123, 23.014438], [42.592134, 23.015156], [42.59214, 23.015424], [42.592146, 23.015844], [42.592144, 23.016117], [42.592129, 23.016534], [42.592095, 23.016933], [42.591986, 23.018077], [42.591961, 23.018518], [42.591953, 23.018865], [42.591969, 23.019144], [42.59199, 23.019338], [42.592019, 23.01953], [42.592074, 23.019772], [42.592141, 23.019991], [42.59221, 23.020175], [42.592353, 23.020485], [42.592478, 23.020699], [42.592571, 23.020841], [42.592667, 23.020977], [42.592775, 23.021124], [42.592892, 23.021259], [42.593013, 23.021383], [42.593137, 23.021518], [42.593282, 23.021685], [42.593532, 23.021952], [42.593671, 23.022096], [42.593789, 23.022249], [42.593917, 23.02242], [42.594078, 23.022672], [42.594206, 23.022884], [42.594744, 23.023852], [42.595028, 23.024403], [42.595069, 23.02448], [42.595091, 23.024579], [42.595084, 23.024677], [42.595045, 23.024772], [42.595003, 23.024868], [42.594975, 23.024971], [42.59496, 23.025076], [42.594964, 23.025186], [42.594983, 23.025313], [42.59501, 23.025415], [42.595046, 23.025493], [42.59509, 23.025555], [42.595137, 23.025604], [42.595201, 23.02564], [42.595276, 23.025664], [42.595359, 23.025671], [42.595441, 23.025658], [42.595504, 23.025637], [42.595559, 23.025603], [42.595623, 23.025528], [42.595659, 23.025475], [42.596002, 23.024988], [42.596099, 23.02485], [42.596299, 23.024568], [42.596367, 23.024441], [42.596774, 23.02369], [42.596797, 23.023648], [42.59657, 23.023459], [42.596521, 23.02357], [42.596397, 23.023475], [42.596346, 23.023483], [42.596305, 23.02351], [42.596244, 23.023594], [42.596105, 23.023654], [42.596244, 23.023594], [42.596287, 23.023535], [42.596305, 23.02351], [42.596346, 23.023483], [42.596397, 23.023475], [42.596521, 23.02357], [42.59657, 23.023459], [42.596797, 23.023648], [42.59733, 23.023399], [42.598269, 23.024213], [42.598341, 23.024275], [42.598691, 23.024579], [42.599047, 23.024887], [42.599785, 23.025527], [42.60071, 23.02619], [42.600978, 23.026394], [42.601111, 23.026495], [42.601203, 23.026571], [42.601726, 23.026976], [42.601897, 23.026677], [42.602265, 23.026037], [42.601492, 23.025443], [42.601478, 23.025432], [42.601365, 23.025345], [42.601164, 23.02519], [42.601455, 23.024514], [42.601636, 23.024095], [42.602454, 23.024733], [42.602811, 23.025193], [42.603657, 23.026567], [42.604773, 23.027483], [42.604994, 23.027707], [42.605069, 23.027882], [42.605117, 23.028123], [42.605116, 23.028307], [42.604998, 23.028982], [42.604926, 23.02939], [42.604964, 23.02997], [42.605006, 23.030604], [42.60501, 23.030693], [42.605025, 23.030777], [42.605289, 23.031329], [42.605384, 23.031498], [42.605395, 23.031549], [42.605386, 23.031586], [42.605387, 23.031631], [42.605398, 23.031673], [42.605419, 23.031708], [42.605447, 23.031731], [42.605478, 23.031741], [42.605509, 23.031737], [42.605537, 23.03172], [42.605571, 23.031775], [42.605576, 23.031786], [42.605657, 23.031963], [42.605738, 23.032181], [42.605851, 23.032541], [42.605908, 23.032723], [42.605974, 23.032963], [42.606078, 23.033357], [42.606157, 23.033735], [42.606216, 23.034099], [42.606258, 23.034431], [42.606283, 23.034908], [42.606303, 23.035307], [42.606284, 23.035462], [42.606252, 23.035568], [42.606236, 23.035688], [42.606192, 23.035741], [42.606158, 23.035813], [42.60614, 23.035908], [42.606142, 23.035979], [42.606175, 23.036093], [42.606235, 23.036175], [42.606291, 23.036212], [42.606378, 23.036223], [42.606462, 23.036186], [42.606808, 23.035977], [42.606932, 23.035922], [42.607203, 23.035823], [42.607259, 23.035805], [42.607523, 23.035732], [42.607584, 23.035719], [42.607773, 23.035678], [42.607998, 23.03566], [42.608208, 23.03566], [42.608475, 23.035694], [42.608583, 23.035724], [42.608795, 23.035784], [42.609087, 23.035923], [42.609156, 23.035974], [42.60941, 23.036162], [42.609838, 23.036531], [42.609828, 23.03656], [42.609824, 23.036602], [42.609831, 23.036642], [42.609848, 23.036678], [42.609856, 23.036687], [42.609872, 23.036703], [42.609901, 23.036717], [42.609932, 23.036717], [42.60996, 23.036703], [42.609984, 23.036677], [42.609992, 23.03666], [42.61, 23.036643], [42.610007, 23.036604], [42.610004, 23.036564], [42.609992, 23.036527], [42.609972, 23.036497], [42.609966, 23.036492], [42.610673, 23.035263], [42.610726, 23.035171], [42.610752, 23.035032], [42.610762, 23.034942], [42.610757, 23.034844], [42.610745, 23.034746], [42.610732, 23.034681], [42.610723, 23.034648], [42.610713, 23.034603], [42.610698, 23.034567], [42.610676, 23.034539], [42.610502, 23.034361], [42.610452, 23.03435], [42.610341, 23.034232], [42.610268, 23.034142], [42.610223, 23.034089], [42.610098, 23.03394], [42.609962, 23.033761], [42.609922, 23.033684], [42.609804, 23.033441], [42.609684, 23.033124], [42.609557, 23.032729], [42.609452, 23.032399], [42.609333, 23.032029], [42.609173, 23.031502], [42.609146, 23.03141], [42.609111, 23.031279], [42.6091, 23.031241], [42.609027, 23.030987], [42.609005, 23.03091], [42.608984, 23.030846], [42.608928, 23.030677], [42.608914, 23.030643], [42.608896, 23.030598], [42.608626, 23.029902], [42.60836, 23.030093], [42.608432, 23.030111], [42.608451, 23.030125], [42.608557, 23.030354], [42.608559, 23.030392], [42.608533, 23.030411], [42.608042, 23.030452], [42.608042, 23.030452], [42.608042, 23.030452], [42.608533, 23.030411], [42.608559, 23.030392], [42.608557, 23.030354], [42.608451, 23.030125], [42.608432, 23.030111], [42.60836, 23.030093], [42.608051, 23.030121], [42.607874, 23.030093], [42.607819, 23.030077], [42.607773, 23.030032], [42.607639, 23.029801], [42.607459, 23.029497], [42.606754, 23.030417], [42.606867, 23.03027], [42.607054, 23.030025], [42.607459, 23.029497], [42.607587, 23.029315], [42.607675, 23.029176], [42.607847, 23.028882], [42.608284, 23.029387], [42.608535, 23.029722], [42.608626, 23.029902], [42.608896, 23.030598], [42.608914, 23.030643], [42.608928, 23.030677], [42.608984, 23.030846], [42.609005, 23.03091], [42.609027, 23.030987], [42.6091, 23.031241], [42.609111, 23.031279], [42.609146, 23.03141], [42.609173, 23.031502], [42.609333, 23.032029], [42.609452, 23.032399], [42.609557, 23.032729], [42.609684, 23.033124], [42.609804, 23.033441], [42.609922, 23.033684], [42.609962, 23.033761], [42.610024, 23.033842], [42.610098, 23.03394], [42.610223, 23.034089], [42.610268, 23.034142], [42.610341, 23.034232], [42.610452, 23.03435], [42.61048, 23.034411], [42.610618, 23.034606], [42.610723, 23.034648], [42.610786, 23.034665], [42.61083, 23.03468], [42.610904, 23.034695], [42.61099, 23.034708], [42.611041, 23.034723], [42.611073, 23.034743], [42.611116, 23.034772], [42.611198, 23.034858], [42.611417, 23.035119], [42.611604, 23.03532], [42.611946, 23.035688], [42.612053, 23.035804], [42.612298, 23.036068], [42.612391, 23.036168], [42.612749, 23.036276], [42.612766, 23.036281], [42.613129, 23.036238], [42.613489, 23.036029], [42.613743, 23.035755], [42.613869, 23.035562], [42.614069, 23.035334], [42.614593, 23.034792], [42.615024, 23.034338], [42.615322, 23.034012], [42.615357, 23.033967], [42.616015, 23.032928], [42.616092, 23.032815], [42.616687, 23.031941], [42.616988, 23.031594], [42.616499, 23.031434], [42.616368, 23.031444], [42.616253, 23.031512], [42.616089, 23.031708], [42.615684, 23.032296], [42.614986, 23.033499], [42.614854, 23.033706], [42.614655, 23.033877], [42.614281, 23.034139], [42.6135, 23.034607], [42.613324, 23.034652], [42.613153, 23.034642], [42.612862, 23.034532], [42.612671, 23.035107], [42.612391, 23.036168], [42.612298, 23.036068], [42.612053, 23.035804], [42.611946, 23.035688], [42.611604, 23.03532], [42.611417, 23.035119], [42.611198, 23.034858], [42.611116, 23.034772], [42.611073, 23.034743], [42.611041, 23.034723], [42.61099, 23.034708], [42.610904, 23.034695], [42.61083, 23.03468], [42.610786, 23.034665], [42.610723, 23.034648], [42.610713, 23.034603], [42.610698, 23.034567], [42.610676, 23.034539], [42.610502, 23.034361], [42.610452, 23.03435], [42.610341, 23.034232], [42.610268, 23.034142], [42.610223, 23.034089], [42.609885, 23.034754], [42.609438, 23.035635], [42.609657, 23.035837], [42.60954, 23.035729], [42.609438, 23.035635], [42.608965, 23.035165], [42.608566, 23.035425], [42.608381, 23.035546], [42.608208, 23.03566], [42.607998, 23.03566], [42.607773, 23.035678], [42.607584, 23.035719], [42.607285, 23.034522], [42.607177, 23.03417], [42.607022, 23.033777], [42.60688, 23.033466], [42.606668, 23.033062], [42.606474, 23.032717], [42.606372, 23.032536], [42.606255, 23.032318], [42.606207, 23.032191], [42.606176, 23.032026], [42.606164, 23.031893], [42.606156, 23.031739], [42.606144, 23.031659], [42.606124, 23.03163], [42.606108, 23.031619], [42.60607, 23.031615], [42.605797, 23.031627], [42.605671, 23.031624], [42.605581, 23.031577], [42.605571, 23.031541], [42.605553, 23.03151], [42.605531, 23.031488], [42.605504, 23.031475], [42.605476, 23.031472], [42.605451, 23.03148], [42.605428, 23.031496], [42.605409, 23.03152], [42.605395, 23.031549], [42.605386, 23.031586], [42.60531, 23.031689], [42.605255, 23.031735], [42.605106, 23.031864], [42.604693, 23.032136], [42.60453, 23.032242], [42.604135, 23.032526], [42.60407, 23.032562], [42.604143, 23.03274], [42.604178, 23.032869], [42.604209, 23.033], [42.604214, 23.0331], [42.604215, 23.033227], [42.604196, 23.033343], [42.604173, 23.033446], [42.604131, 23.033563], [42.603474, 23.035144], [42.603404, 23.035289], [42.603329, 23.035418], [42.603258, 23.035521], [42.603187, 23.035612], [42.603002, 23.03582], [42.60281, 23.036019], [42.602604, 23.036239], [42.602545, 23.0363], [42.602483, 23.036365], [42.602525, 23.036461], [42.602545, 23.036507], [42.602616, 23.036672], [42.602763, 23.03699], [42.60282, 23.037128], [42.602839, 23.037171], [42.602996, 23.037602], [42.60314, 23.038085], [42.603256, 23.038529], [42.603405, 23.039102], [42.603472, 23.039386], [42.603634, 23.040286], [42.603754, 23.041044], [42.603776, 23.041185], [42.60383, 23.041604], [42.603821, 23.04181], [42.603819, 23.041854], [42.603719, 23.042225], [42.6036, 23.042578], [42.603155, 23.043874], [42.602931, 23.044494], [42.602857, 23.044745], [42.602781, 23.045119], [42.60274, 23.045483], [42.602727, 23.045848], [42.602738, 23.046202], [42.602781, 23.046597], [42.602864, 23.047335], [42.603053, 23.048398], [42.60318, 23.049114], [42.603191, 23.049355], [42.603208, 23.050033], [42.60331, 23.052963], [42.603366, 23.05398], [42.603454, 23.055022], [42.603562, 23.056678], [42.603679, 23.058107], [42.60369, 23.058247], [42.603966, 23.061456], [42.603999, 23.062116], [42.604021, 23.06268], [42.604026, 23.063117], [42.604023, 23.063334], [42.604011, 23.064242], [42.603982, 23.064796], [42.603943, 23.065515], [42.603859, 23.06684], [42.603772, 23.068543], [42.603694, 23.069864], [42.603692, 23.070206], [42.603716, 23.070672], [42.60374, 23.070928], [42.603861, 23.071603], [42.603961, 23.072163], [42.604076, 23.072867], [42.604127, 23.073408], [42.604144, 23.073915], [42.604136, 23.074348], [42.604085, 23.075012], [42.603801, 23.077717], [42.603648, 23.079393], [42.603395, 23.083915], [42.603318, 23.085561], [42.603284, 23.086444], [42.603245, 23.087661], [42.603145, 23.089985], [42.603075, 23.091602], [42.602501, 23.105227], [42.602487, 23.105614], [42.602453, 23.106408], [42.602422, 23.106919], [42.602391, 23.10735], [42.602305, 23.107995], [42.602143, 23.109048], [42.602052, 23.109748], [42.602007, 23.11032], [42.601948, 23.111395], [42.601913, 23.111958], [42.601878, 23.112297], [42.601848, 23.112497], [42.601791, 23.112828], [42.601732, 23.113173], [42.601337, 23.115189], [42.60123, 23.115764], [42.600813, 23.118233], [42.600773, 23.118543], [42.600736, 23.11895], [42.600702, 23.119329], [42.600669, 23.119802], [42.60066, 23.12028], [42.600686, 23.121389], [42.600676, 23.121637], [42.600651, 23.121822], [42.600629, 23.121959], [42.600589, 23.122118], [42.60054, 23.122242], [42.600481, 23.122345], [42.600421, 23.122424], [42.600355, 23.122482], [42.600285, 23.122518], [42.600196, 23.122553], [42.600073, 23.122575], [42.599944, 23.122531], [42.599762, 23.122498], [42.599564, 23.122486], [42.599423, 23.122534], [42.599293, 23.12261], [42.599178, 23.122705], [42.599082, 23.122823], [42.599016, 23.122928], [42.598942, 23.12309], [42.598887, 23.12327], [42.598866, 23.123419], [42.598857, 23.123567], [42.598858, 23.123773], [42.598883, 23.123979], [42.598924, 23.12419], [42.59899, 23.124379], [42.599062, 23.124525], [42.599163, 23.124685], [42.599247, 23.12479], [42.599361, 23.124898], [42.599496, 23.124994], [42.599642, 23.125074], [42.599845, 23.125229], [42.599963, 23.12538], [42.600057, 23.12556], [42.600147, 23.125762], [42.600798, 23.127594], [42.600883, 23.127859], [42.600951, 23.128139], [42.60101, 23.128428], [42.601082, 23.128837], [42.601176, 23.129267], [42.601179, 23.129486], [42.601194, 23.129752], [42.601213, 23.130201], [42.601247, 23.130744], [42.601288, 23.131393], [42.601489, 23.134603], [42.601639, 23.136998], [42.601812, 23.139755], [42.601842, 23.140232], [42.601869, 23.140654], [42.601876, 23.140766], [42.601878, 23.140802], [42.601893, 23.141034], [42.601956, 23.142047], [42.601982, 23.142461], [42.60201, 23.142851], [42.602077, 23.14379], [42.602081, 23.143847], [42.602098, 23.144089], [42.602109, 23.144284], [42.602114, 23.144369], [42.602135, 23.144746], [42.602104, 23.144838], [42.602094, 23.144922], [42.602183, 23.146254], [42.602272, 23.147708], [42.602414, 23.150048], [42.602443, 23.150522], [42.602472, 23.151564], [42.60245, 23.152628], [42.602243, 23.155209], [42.602224, 23.156115], [42.602282, 23.156829], [42.602409, 23.157468], [42.602624, 23.158251], [42.602823, 23.158726], [42.603208, 23.159422], [42.603692, 23.160099], [42.606244, 23.163287], [42.607078, 23.164463], [42.607406, 23.165092], [42.607583, 23.165433], [42.608022, 23.166456], [42.608161, 23.166779], [42.608847, 23.168377], [42.609542, 23.170288], [42.610226, 23.172101], [42.610731, 23.172824], [42.611225, 23.173266], [42.611729, 23.173496], [42.612117, 23.173607], [42.614349, 23.17393], [42.615028, 23.174168], [42.615195, 23.174256], [42.61534, 23.174334], [42.615475, 23.174433], [42.615573, 23.174521], [42.616154, 23.175115], [42.616467, 23.175477], [42.617056, 23.176159], [42.617167, 23.176286], [42.6175, 23.176663], [42.618164, 23.177414], [42.618497, 23.177653], [42.618854, 23.177841], [42.619462, 23.178458], [42.621206, 23.180217], [42.621332, 23.180343], [42.621658, 23.180681], [42.621709, 23.180734], [42.622293, 23.181457], [42.622439, 23.18174], [42.622572, 23.18205], [42.622683, 23.182365], [42.622777, 23.182706], [42.622834, 23.182997], [42.62287, 23.183287], [42.622889, 23.18386], [42.622872, 23.184246], [42.622837, 23.185044], [42.622854, 23.185565], [42.622862, 23.185792], [42.622895, 23.186031], [42.622966, 23.186338], [42.623056, 23.186662], [42.623097, 23.186812], [42.623328, 23.187413], [42.623571, 23.187968], [42.623814, 23.188522], [42.624093, 23.189037], [42.624463, 23.189571], [42.624745, 23.189885], [42.62512, 23.190209], [42.625493, 23.190466], [42.625894, 23.19062], [42.626214, 23.1907], [42.62662, 23.190737], [42.627051, 23.190692], [42.627523, 23.190522], [42.628547, 23.190071], [42.629343, 23.189684], [42.629864, 23.189459], [42.630304, 23.189372], [42.630856, 23.189316], [42.63098, 23.189317], [42.631069, 23.189318], [42.63108, 23.189319], [42.631295, 23.189321], [42.631761, 23.189435], [42.631931, 23.189516], [42.63208, 23.189586], [42.632522, 23.189867], [42.632896, 23.190164], [42.633308, 23.190551], [42.633583, 23.190997], [42.633782, 23.191402], [42.634051, 23.19205], [42.634718, 23.193921], [42.634883, 23.194383], [42.635066, 23.194825], [42.635259, 23.195207], [42.635536, 23.19558], [42.635743, 23.195802], [42.635909, 23.195961], [42.635967, 23.196004], [42.636548, 23.196443], [42.63719, 23.197018], [42.637571, 23.197314], [42.638111, 23.197732], [42.638394, 23.197953], [42.638567, 23.198188], [42.638718, 23.198506], [42.638963, 23.199204], [42.639103, 23.199746], [42.639216, 23.200086], [42.639474, 23.200654], [42.639988, 23.201394], [42.640692, 23.202054], [42.641138, 23.202576], [42.641707, 23.20336], [42.641939, 23.203599], [42.642184, 23.203816], [42.643257, 23.204634], [42.643638, 23.204879], [42.644683, 23.205488], [42.64495, 23.20572], [42.645159, 23.205917], [42.645298, 23.206076], [42.645555, 23.206385], [42.64582, 23.206764], [42.646186, 23.207221], [42.646448, 23.207548], [42.64662, 23.207686], [42.647231, 23.208484], [42.647417, 23.208804], [42.647539, 23.209102], [42.647642, 23.209391], [42.647805, 23.210136], [42.647817, 23.210198], [42.647871, 23.210468], [42.647974, 23.210715], [42.648136, 23.210967], [42.64854, 23.211408], [42.64869, 23.211571], [42.648748, 23.211634], [42.64886, 23.211793], [42.648952, 23.211996], [42.649024, 23.212222], [42.649047, 23.212309], [42.649092, 23.212481], [42.649232, 23.213059], [42.649678, 23.21463], [42.650505, 23.217299], [42.650524, 23.21736], [42.650547, 23.217435], [42.650578, 23.217533], [42.650825, 23.21833], [42.650936, 23.21869], [42.650947, 23.218723], [42.650983, 23.218841], [42.651036, 23.219011], [42.651046, 23.219042], [42.65118, 23.219476], [42.651229, 23.219634], [42.651267, 23.219758], [42.651286, 23.219819], [42.652167, 23.222663], [42.652281, 23.223039], [42.652306, 23.223128], [42.652326, 23.223187], [42.652451, 23.22356], [42.652507, 23.223698], [42.652651, 23.223884], [42.652879, 23.22416], [42.653205, 23.22454], [42.653391, 23.224796], [42.653574, 23.225087], [42.653732, 23.225387], [42.653841, 23.225689], [42.653931, 23.225999], [42.654082, 23.226723], [42.654253, 23.227521], [42.65434, 23.22791], [42.654378, 23.228088], [42.654452, 23.228431], [42.654465, 23.228492], [42.654484, 23.228568], [42.654496, 23.228622], [42.654601, 23.229043], [42.654924, 23.230008], [42.655209, 23.230811], [42.655654, 23.232054], [42.65574, 23.232405], [42.655867, 23.232918], [42.655968, 23.233309], [42.656054, 23.233571], [42.657064, 23.235856], [42.657228, 23.236235], [42.657246, 23.236278], [42.657288, 23.236374], [42.657376, 23.236578], [42.657388, 23.236606], [42.657591, 23.237077], [42.658064, 23.238177], [42.658189, 23.23849], [42.658478, 23.239446], [42.65855, 23.239682], [42.658709, 23.240176], [42.658748, 23.240297], [42.658758, 23.24033], [42.658776, 23.240392], [42.658872, 23.240713], [42.658957, 23.241146], [42.658971, 23.241212], [42.65899, 23.241316], [42.659006, 23.241422], [42.659007, 23.241452], [42.659007, 23.241486], [42.659008, 23.241663], [42.659063, 23.242006], [42.659088, 23.242168], [42.659209, 23.242933], [42.659226, 23.243045], [42.659293, 23.243466], [42.659302, 23.243521], [42.659313, 23.243587], [42.659386, 23.243983], [42.659431, 23.244157], [42.659658, 23.244855], [42.659915, 23.245641], [42.660081, 23.246147], [42.660192, 23.246494], [42.660533, 23.247559], [42.660599, 23.24769], [42.66063, 23.24775], [42.66077, 23.248181], [42.660807, 23.248282], [42.660826, 23.248334], [42.661062, 23.248986], [42.661614, 23.25045], [42.662605, 23.25308], [42.66274, 23.253438], [42.662747, 23.253458], [42.66276, 23.253492], [42.662782, 23.253551], [42.662991, 23.254105], [42.66471, 23.258675], [42.665041, 23.259569], [42.665049, 23.259589], [42.665115, 23.259768], [42.665154, 23.25987], [42.665218, 23.260028], [42.665372, 23.260453], [42.665457, 23.260615], [42.666253, 23.262776], [42.666321, 23.262923], [42.666392, 23.263053], [42.667609, 23.265173], [42.667873, 23.265639], [42.66789, 23.265669], [42.667967, 23.265805], [42.667892, 23.265916], [42.667869, 23.26595], [42.667833, 23.266003], [42.667882, 23.266089], [42.667907, 23.266132], [42.667987, 23.266272], [42.668121, 23.266507], [42.668501, 23.267174], [42.668546, 23.267253], [42.668801, 23.2677], [42.669544, 23.269003], [42.6695, 23.269055], [42.669024, 23.269566], [42.668996, 23.269664], [42.668967, 23.269785], [42.66892, 23.269976], [42.668589, 23.271097], [42.668503, 23.271377], [42.668496, 23.2714], [42.668425, 23.271638], [42.668413, 23.271679], [42.668376, 23.271802], [42.668373, 23.271812], [42.668364, 23.271843], [42.668168, 23.2725], [42.668162, 23.272521], [42.668075, 23.27282], [42.667708, 23.274074], [42.667363, 23.273902], [42.667152, 23.273797], [42.666904, 23.273677], [42.666779, 23.273617], [42.666668, 23.273563], [42.666193, 23.273333], [42.665659, 23.273074], [42.665601, 23.273046], [42.665665, 23.272825], [42.665748, 23.272539], [42.665778, 23.272435], [42.665788, 23.2724], [42.665792, 23.272384], [42.66583, 23.272247], [42.665853, 23.272164], [42.665881, 23.272066], [42.665978, 23.271718], [42.665993, 23.271663], [42.666093, 23.271284], [42.666111, 23.271217], [42.66615, 23.271071], [42.666155, 23.271049], [42.666246, 23.270705], [42.666276, 23.270592], [42.66629, 23.270541], [42.666299, 23.270508], [42.666304, 23.27049], [42.666327, 23.270409], [42.666336, 23.270378], [42.666384, 23.270207], [42.666423, 23.270074], [42.666426, 23.270062], [42.666438, 23.27002], [42.666448, 23.269983], [42.66646, 23.269944], [42.666518, 23.269741], [42.666547, 23.269638], [42.666552, 23.269619], [42.666558, 23.2696], [42.666562, 23.269585], [42.666565, 23.269575], [42.666677, 23.269182], [42.666748, 23.268932], [42.666797, 23.268761], [42.66682, 23.26868], [42.666873, 23.268496], [42.666952, 23.268219], [42.667011, 23.268013], [42.667189, 23.267377], [42.667205, 23.267327], [42.667243, 23.267206], [42.667249, 23.267184], [42.667431, 23.2666], [42.667439, 23.26657], [42.667491, 23.266382], [42.667503, 23.266338], [42.667503, 23.266335], [42.667505, 23.266329], [42.667513, 23.2662], [42.667551, 23.266201], [42.667598, 23.266196], [42.66764, 23.266183], [42.667681, 23.26616], [42.667778, 23.266073], [42.667788, 23.266062], [42.667833, 23.266003], [42.667869, 23.26595], [42.667892, 23.265916], [42.667967, 23.265805], [42.668031, 23.265688], [42.668068, 23.265622], [42.668096, 23.265574], [42.668126, 23.265522], [42.668356, 23.265122], [42.6686, 23.264697], [42.668628, 23.264649], [42.668774, 23.264396], [42.66926, 23.263571], [42.669367, 23.263402], [42.66946, 23.263288], [42.669624, 23.263122], [42.669688, 23.263046], [42.669748, 23.262974], [42.66996, 23.262677], [42.670139, 23.262434], [42.670223, 23.262319], [42.670327, 23.262185], [42.670368, 23.262135], [42.670398, 23.262098], [42.670484, 23.261994], [42.67053, 23.26194], [42.670763, 23.261665], [42.67108, 23.261268], [42.671314, 23.260981], [42.671626, 23.260601], [42.671697, 23.260515], [42.67154, 23.260186], [42.67131, 23.259704], [42.671253, 23.259587], [42.671029, 23.25912], [42.670879, 23.258807], [42.670841, 23.258727], [42.670617, 23.258261], [42.670607, 23.258239], [42.670352, 23.257707], [42.670288, 23.25758], [42.66998, 23.256929], [42.669902, 23.256764], [42.669796, 23.25654], [42.669536, 23.255991], [42.669389, 23.25568], [42.669349, 23.255595], [42.669326, 23.255546], [42.669241, 23.255368], [42.669236, 23.255357], [42.669176, 23.25523], [42.669153, 23.255182], [42.669135, 23.255144], [42.669074, 23.255016], [42.669166, 23.254896], [42.669189, 23.254868], [42.66959, 23.254378], [42.670307, 23.253492], [42.671574, 23.251938], [42.671695, 23.251795], [42.671814, 23.251649], [42.671855, 23.251602], [42.671883, 23.251571], [42.671996, 23.251431], [42.672006, 23.25142], [42.672233, 23.251142], [42.672439, 23.25094], [42.67263, 23.250772], [42.672847, 23.250608], [42.672939, 23.250543], [42.673054, 23.250471], [42.673227, 23.250369], [42.673339, 23.250306], [42.673465, 23.250249], [42.673648, 23.250174], [42.673967, 23.250054], [42.674383, 23.249936], [42.674808, 23.249866], [42.675638, 23.249742], [42.675923, 23.2497], [42.675945, 23.249696], [42.676079, 23.249677], [42.676468, 23.249619], [42.676513, 23.249612], [42.676558, 23.249605], [42.676609, 23.249598], [42.676856, 23.249555], [42.67714, 23.249486], [42.67739, 23.2494], [42.677573, 23.249327], [42.677835, 23.249197], [42.678092, 23.249051], [42.67863, 23.248668], [42.678822, 23.248492], [42.679086, 23.248207], [42.679208, 23.248081], [42.679386, 23.247832], [42.679503, 23.247664], [42.679692, 23.247367], [42.679842, 23.247081], [42.679952, 23.246871], [42.680023, 23.246738], [42.680263, 23.246273], [42.680356, 23.246093], [42.680624, 23.245549], [42.680731, 23.245326], [42.681064, 23.244659], [42.681538, 23.243709], [42.682118, 23.242602], [42.682258, 23.242334], [42.682437, 23.241991], [42.682473, 23.241921], [42.682496, 23.241875], [42.682734, 23.241421], [42.682916, 23.241072], [42.683079, 23.240761], [42.683092, 23.240735], [42.683175, 23.240572], [42.683319, 23.240276], [42.6835, 23.239885], [42.684435, 23.238065], [42.685071, 23.236862], [42.685414, 23.236191], [42.685775, 23.235464], [42.686765, 23.233433], [42.686842, 23.23328], [42.687067, 23.232867], [42.687186, 23.23265], [42.687212, 23.232603], [42.687331, 23.232414], [42.687426, 23.232264], [42.687618, 23.23198], [42.6881, 23.231426], [42.688588, 23.231022], [42.688952, 23.230779], [42.689278, 23.230605], [42.689522, 23.230503], [42.689896, 23.230384], [42.690264, 23.230311], [42.690371, 23.230301], [42.69064, 23.230282], [42.691067, 23.230268], [42.691229, 23.230264], [42.691607, 23.230254], [42.692394, 23.230262], [42.694843, 23.230288], [42.69514, 23.230291], [42.695218, 23.230292], [42.695624, 23.230296], [42.695679, 23.230296], [42.695895, 23.230298], [42.695882, 23.230559], [42.69588, 23.23061], [42.695855, 23.231125], [42.695829, 23.231663]],
+                {"bubblingMouseEvents": true, "color": "#FF0000", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#FF0000", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 4}
+            ).addTo(feature_group_d5a5de5738bde6c45e3487d08cabfc30);
+        
+    
+            feature_group_d5a5de5738bde6c45e3487d08cabfc30.addTo(map_55e9d01014ebdf769bf38da2563cb78e);
+        
+</script>
+</html>
