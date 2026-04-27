@@ -7,7 +7,14 @@ from typing import List, Tuple, Dict, Optional, Any
 from dataclasses import dataclass
 import logging
 import math
-from config import get_config, WarehouseConfig, VehicleConfig, VehicleType
+from config import (
+    get_config,
+    WarehouseConfig,
+    VehicleConfig,
+    VehicleType,
+    describe_center_zone,
+    is_location_in_center_zone,
+)
 from input_handler import Customer, InputData
 
 logger = logging.getLogger(__name__)
@@ -190,7 +197,10 @@ class WarehouseManager:
         center_zone_customers = []
         if self.location_config.enable_center_zone_priority:
             center_zone_customers = self._identify_center_zone_customers(vehicle_customers)
-            logger.info(f"🎯 Намерени {len(center_zone_customers)} клиента в център зоната (радиус {self.location_config.center_zone_radius_km} км)")
+            logger.info(
+                f"🎯 Намерени {len(center_zone_customers)} клиента в център зоната "
+                f"({describe_center_zone(self.location_config)})"
+            )
         
         warehouse_volume = sum(c.volume for c in warehouse_customers)
         
@@ -334,11 +344,7 @@ class WarehouseManager:
         center_zone_customers = []
         
         for customer in customers:
-            if customer.coordinates and is_in_center_zone(
-                customer.coordinates, 
-                self.location_config.center_location, 
-                self.location_config.center_zone_radius_km
-            ):
+            if customer.coordinates and is_location_in_center_zone(customer.coordinates, self.location_config):
                 center_zone_customers.append(customer)
                 logger.debug(f"🎯 Клиент '{customer.name}' е в център зоната (разстояние: "
                            f"{calculate_distance_km(customer.coordinates, self.location_config.center_location):.2f} км)")

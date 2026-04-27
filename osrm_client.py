@@ -1062,11 +1062,12 @@ class OSRMClient:
                         
                         try:
                             # Опитваме Route API за междубbatch разстояния
-                            route_result = self._single_route_request(src_loc, dest_loc)
-                            full_distances[src_idx][dest_idx] = route_result['distance']
-                            full_distances[dest_idx][src_idx] = route_result['distance']  # Симетрично
-                            full_durations[src_idx][dest_idx] = route_result['duration']
-                            full_durations[dest_idx][src_idx] = route_result['duration']
+                            forward_result = self._single_route_request(src_loc, dest_loc)
+                            reverse_result = self._single_route_request(dest_loc, src_loc)
+                            full_distances[src_idx][dest_idx] = forward_result['distance']
+                            full_distances[dest_idx][src_idx] = reverse_result['distance']
+                            full_durations[src_idx][dest_idx] = forward_result['duration']
+                            full_durations[dest_idx][src_idx] = reverse_result['duration']
                         except:
                             # Fallback към приблизителни стойности
                             approx_distance = self._haversine_distance(src_loc, dest_loc) * 1.3
@@ -1215,14 +1216,18 @@ class OSRMClient:
                             inter_src_idx = src_idx_local  # batch i локации са в началото
                             inter_dest_idx = batch_i_size + dest_idx_local  # batch j локации са след batch i
                             
-                            distance = inter_batch_matrix.distances[inter_src_idx][inter_dest_idx]
-                            duration = inter_batch_matrix.durations[inter_src_idx][inter_dest_idx]
+                            reverse_src_idx = batch_i_size + dest_idx_local
+                            reverse_dest_idx = src_idx_local
+                            forward_distance = inter_batch_matrix.distances[inter_src_idx][inter_dest_idx]
+                            reverse_distance = inter_batch_matrix.distances[reverse_src_idx][reverse_dest_idx]
+                            forward_duration = inter_batch_matrix.durations[inter_src_idx][inter_dest_idx]
+                            reverse_duration = inter_batch_matrix.durations[reverse_src_idx][reverse_dest_idx]
                             
-                            # Симетрично попълване
-                            full_distances[global_src][global_dest] = distance
-                            full_distances[global_dest][global_src] = distance
-                            full_durations[global_src][global_dest] = duration
-                            full_durations[global_dest][global_src] = duration
+                            # Store both Table API directions separately.
+                            full_distances[global_src][global_dest] = forward_distance
+                            full_distances[global_dest][global_src] = reverse_distance
+                            full_durations[global_src][global_dest] = forward_duration
+                            full_durations[global_dest][global_src] = reverse_duration
                     
                     logger.debug(f"✅ Table API успешна за batch {i}-{j}")
                     
@@ -1235,10 +1240,19 @@ class OSRMClient:
                             src_loc = locations[src_idx]
                             dest_loc = locations[dest_idx]
                             
-                            approx_distance = self._haversine_distance(src_loc, dest_loc) * 1.3
-                            approx_duration = (approx_distance / 1000) / self.config.average_speed_kmh * 3600
+                            try:
+                                forward_result = self._single_route_request(src_loc, dest_loc)
+                                reverse_result = self._single_route_request(dest_loc, src_loc)
+                                full_distances[src_idx][dest_idx] = forward_result['distance']
+                                full_distances[dest_idx][src_idx] = reverse_result['distance']
+                                full_durations[src_idx][dest_idx] = forward_result['duration']
+                                full_durations[dest_idx][src_idx] = reverse_result['duration']
+                                continue
+                            except Exception:
+                                approx_distance = self._haversine_distance(src_loc, dest_loc) * 1.3
+                                approx_duration = (approx_distance / 1000) / self.config.average_speed_kmh * 3600
                             
-                            # Симетрично попълване
+                            # Last-resort approximation has no directionality.
                             full_distances[src_idx][dest_idx] = approx_distance
                             full_distances[dest_idx][src_idx] = approx_distance
                             full_durations[src_idx][dest_idx] = approx_duration

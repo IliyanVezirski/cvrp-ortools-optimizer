@@ -20,7 +20,15 @@ except ImportError:
     ORTOOLS_AVAILABLE = False
     logging.warning("OR-Tools не е инсталиран. Ще се използва опростен алгоритъм.")
 
-from config import get_config, CVRPConfig, VehicleConfig, VehicleType, LocationConfig
+from config import (
+    get_config,
+    CVRPConfig,
+    VehicleConfig,
+    VehicleType,
+    LocationConfig,
+    is_location_in_center_zone,
+    calculate_customer_drop_penalties,
+)
 from input_handler import Customer
 from osrm_client import DistanceMatrix
 from warehouse_manager import WarehouseAllocation
@@ -197,19 +205,8 @@ class ORToolsSolver:
                 stop_callback_index, 0, data['vehicle_max_stops'], True, "Stops"
             )
 
-            # Време - АКТИВИРАНО със vehicle-specific service times
-            logger.info("🕐 Създаване на vehicle-specific time callback...")
-            
-            # Предварително изчисляваме средния service time
-            enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
-            if enabled_vehicles:
-                avg_service_time_seconds = int(sum(v.service_time_minutes * 60 for v in enabled_vehicles) / len(enabled_vehicles))
-            else:
-                avg_service_time_seconds = 15 * 60  # По подразбиране
-            
-            logger.info(f"📊 Средна service time за OR-Tools callback: {avg_service_time_seconds/60:.1f} минути")
-            
-            # Създаваме mapping от vehicle_id към service_time
+            # Време - АКТИВИРАНО със service time според конкретния бус.
+            logger.info("🕐 Създаване на vehicle-specific time callbacks...")
             vehicle_service_times = data['vehicle_service_times']
             
             # === ГРАДСКИ ТРАФИК: Предварително определяме кои локации са в градската зона ===
@@ -254,70 +251,60 @@ class ORToolsSolver:
                 logger.info(f"  - Множител: {city_traffic_multiplier} (+{(city_traffic_multiplier-1)*100:.0f}%)")
                 logger.info(f"  - Локации в градска зона: {city_locations_count}/{num_locations}")
             
-            def vehicle_specific_time_callback(from_index, to_index):
-                try:
-                    # Проверяваме за валидни индекси преди IndexToNode
-                    if from_index < 0 or to_index < 0:
-                        return 0
-                    
-                    # Опитваме се да извлечем node-овете
-                    from_node = manager.IndexToNode(from_index)
-                    to_node = manager.IndexToNode(to_index)
-                    
-                    # Проверяваме границите на матрицата
-                    if (from_node >= len(self.distance_matrix.durations) or 
-                        to_node >= len(self.distance_matrix.durations[0])):
-                        logger.warning(f"⚠️ Индекси извън граници: from_node={from_node}, to_node={to_node}")
-                        return 0
-                    
-                    travel_time = self.distance_matrix.durations[from_node][to_node]
-                    
-                    # === ГРАДСКИ ТРАФИК: Прилагаме множител ако и двете точки са в града ===
-                    if enable_city_traffic and from_node < len(locations_in_city) and to_node < len(locations_in_city):
-                        if locations_in_city[from_node] and locations_in_city[to_node]:
-                            travel_time = travel_time * city_traffic_multiplier
-                    
-                    # Service time само за клиенти (не за депа) - използваме предварително изчислената стойност
-                    node_service_time = 0
-                    if from_node >= len(self.unique_depots):  # Ако започваме от клиент
-                        node_service_time = avg_service_time_seconds
-                    
-                    result = int(travel_time + node_service_time)
-                    
-                    # Проверяваме за разумни стойности
-                    if result < 0 or result > 86400:  # Повече от 24 часа е подозрително
-                        logger.warning(f"⚠️ Подозрителна time стойност: {result} сек за {from_node}->{to_node}")
-                        return min(result, 86400)
-                    
-                    return result
-                    
-                except (OverflowError, IndexError, ValueError) as e:
-                    logger.warning(f"⚠️ Грешка в time callback ({from_index}->{to_index}): {e}")
-                    # Връщаме безопасна стойност
-                    return 3600  # 1 час по подразбиране
-                except Exception as e:
-                    logger.error(f"❌ Неочаквана грешка в time callback: {e}")
-                    return 3600
-            
-            time_callback_index = routing.RegisterTransitCallback(vehicle_specific_time_callback)
-            
-            # Добавяме Time dimension
-            routing.AddDimensionWithVehicleCapacity(
-                time_callback_index, 0, data['vehicle_max_times'], False, "Time"
+            def make_vehicle_time_callback(vehicle_id, service_time_seconds):
+                def vehicle_time_callback(from_index, to_index):
+                    try:
+                        if from_index < 0 or to_index < 0:
+                            return 0
+
+                        from_node = manager.IndexToNode(from_index)
+                        to_node = manager.IndexToNode(to_index)
+
+                        if (from_node >= len(self.distance_matrix.durations) or
+                            to_node >= len(self.distance_matrix.durations[0])):
+                            logger.warning(f"⚠️ Индекси извън граници: from_node={from_node}, to_node={to_node}")
+                            return 0
+
+                        travel_time = self.distance_matrix.durations[from_node][to_node]
+
+                        if enable_city_traffic and from_node < len(locations_in_city) and to_node < len(locations_in_city):
+                            if locations_in_city[from_node] and locations_in_city[to_node]:
+                                travel_time = travel_time * city_traffic_multiplier
+
+                        if from_node >= len(self.unique_depots):
+                            travel_time += service_time_seconds
+
+                        result = int(travel_time)
+                        if result < 0 or result > 86400:
+                            logger.warning(f"⚠️ Подозрителна time стойност: {result} сек за {from_node}->{to_node}")
+                            return min(result, 86400)
+
+                        return result
+
+                    except (OverflowError, IndexError, ValueError) as e:
+                        logger.warning(f"⚠️ Грешка в time callback vehicle={vehicle_id} ({from_index}->{to_index}): {e}")
+                        return 3600
+                    except Exception as e:
+                        logger.error(f"❌ Неочаквана грешка в time callback vehicle={vehicle_id}: {e}")
+                        return 3600
+
+                return vehicle_time_callback
+
+            time_callback_indices = []
+            for vehicle_id in range(data['num_vehicles']):
+                service_time_seconds = int(vehicle_service_times.get(vehicle_id, 15 * 60))
+                time_callback_indices.append(
+                    routing.RegisterTransitCallback(
+                        make_vehicle_time_callback(vehicle_id, service_time_seconds)
+                    )
+                )
+                logger.info(f"  - vehicle {vehicle_id}: service time {service_time_seconds / 60:.1f} мин/клиент")
+
+            routing.AddDimensionWithVehicleTransitAndCapacity(
+                time_callback_indices, 0, data['vehicle_max_times'], False, "Time"
             )
-            
-            # Логваме service times за информация
-            enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
-            if enabled_vehicles:
-                avg_service_time = sum(v.service_time_minutes for v in enabled_vehicles) / len(enabled_vehicles)
-                logger.info(f"📊 Service times (поради OR-Tools ограничения използваме средна стойност):")
-                logger.info(f"  - Средно време: {avg_service_time:.1f} мин/клиент")
-                for v in enabled_vehicles:
-                    logger.info(f"  - {v.vehicle_type.value}: {v.service_time_minutes} мин/клиент (конфигурирано)")
-                logger.warning("⚠️ OR-Tools не поддържа vehicle-specific service times в transit callbacks")
-                logger.info("💡 Service times се прилагат по време на solution extraction с точни стойности")
-            
-            logger.info("✅ Time callback настроен успешно")
+
+            logger.info("✅ Vehicle-specific Time callbacks настроени успешно")
 
             # 4. ЛОГИКА ЗА ПРОПУСКАНЕ НА КЛИЕНТИ - с ДИНАМИЧНА глоба по твоята формула
             logger.info("Използва се ДИНАМИЧНА глоба за пропускане на клиенти, базирана на разстояние и обем.")
@@ -380,14 +367,24 @@ class ORToolsSolver:
             
             # Добавяме възможност за пропускане на клиенти (ако е разрешено)
             if self.config.allow_customer_skipping:
+                drop_penalties = calculate_customer_drop_penalties(
+                    self.customers,
+                    self.unique_depots,
+                    self.config,
+                )
                 logger.info("🔄 Добавяне на възможност за пропускане на клиенти...")
                 for node_idx in range(len(self.unique_depots), len(data['distance_matrix'])):
                     # Добавяме възможността за пропускане, но с умерена глоба
                     # Ограничаваме до максимално допустимата стойност за int64
                     max_safe_penalty = 9223372036854775807  # Максимално допустима стойност за int64 (2^63-1)
-                    penalty = min(distance_penalty_disjunction, max_safe_penalty)
+                    customer_idx = node_idx - len(self.unique_depots)
+                    penalty = min(drop_penalties[customer_idx], max_safe_penalty)
                     routing.AddDisjunction([manager.NodeToIndex(node_idx)], penalty)
-                logger.info(f"✅ Добавена възможност за пропускане на клиенти с глоба: {distance_penalty_disjunction}")
+                logger.info(
+                    "✅ Добавена възможност за пропускане на клиенти с индивидуални глоби: "
+                    f"min={min(drop_penalties) if drop_penalties else 0}, "
+                    f"max={max(drop_penalties) if drop_penalties else 0}"
+                )
             else:
                 logger.info("🚫 Пропускане на клиенти е ИЗКЛЮЧЕНО - ВСИЧКИ клиенти трябва да бъдат обслужени")
                 logger.warning("⚠️ Ако няма достатъчно капацитет, solver-ът може да не намери решение!")
@@ -426,6 +423,13 @@ class ORToolsSolver:
                 logger.info(f"  - CENTER_BUS discount for center clients: {self.location_config.discount_center_bus}")
                 logger.info(f"  - Center zone customers: {len(self.center_zone_customers)}")
             
+            def _customer_is_in_center_zone(customer: Customer) -> bool:
+                return bool(
+                    customer.coordinates
+                    and self.location_config
+                    and is_location_in_center_zone(customer.coordinates, self.location_config)
+                )
+
             # 6. ГЛОБА ЗА ОСТАНАЛИТЕ БУСОВЕ ЗА ВЛИЗАНЕ В ЦЕНТЪРА
             if data['external_bus_vehicle_ids'] and self.location_config and self.location_config.enable_center_zone_restrictions:
                 logger.info("🚫 Прилагане на глоба за EXTERNAL_BUS в център зоната")
@@ -440,16 +444,9 @@ class ORToolsSolver:
                         customer_index = to_node - len(self.unique_depots)
                         customer = self.customers[customer_index]
                         
-                        # Проверяваме дали клиентът е в център зоната
-                        if customer.coordinates and self.location_config:
-                            distance_to_center = calculate_distance_km(
-                                customer.coordinates, 
-                                self.location_config.center_location
-                            )
-                            if distance_to_center <= self.location_config.center_zone_radius_km:
-                                # Увеличаваме разходите за EXTERNAL_BUS с конфигурируем множител
-                                multiplier = self.location_config.external_bus_center_penalty if self.location_config else 50000
-                                return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
+                        if _customer_is_in_center_zone(customer):
+                            multiplier = self.location_config.external_bus_center_penalty if self.location_config else 50000
+                            return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
                     
                     return int(self.distance_matrix.distances[from_node][to_node])
                 
@@ -473,16 +470,9 @@ class ORToolsSolver:
                         customer_index = to_node - len(self.unique_depots)
                         customer = self.customers[customer_index]
                         
-                        # Проверяваме дали клиентът е в център зоната
-                        if customer.coordinates and self.location_config:
-                            distance_to_center = calculate_distance_km(
-                                customer.coordinates, 
-                                self.location_config.center_location
-                            )
-                            if distance_to_center <= self.location_config.center_zone_radius_km:
-                                # Увеличаваме разходите за INTERNAL_BUS с конфигурируем множител
-                                multiplier = self.location_config.internal_bus_center_penalty if self.location_config else 50000
-                                return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
+                        if _customer_is_in_center_zone(customer):
+                            multiplier = self.location_config.internal_bus_center_penalty if self.location_config else 50000
+                            return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
                     
                     return int(self.distance_matrix.distances[from_node][to_node])
                 
@@ -506,16 +496,9 @@ class ORToolsSolver:
                         customer_index = to_node - len(self.unique_depots)
                         customer = self.customers[customer_index]
                         
-                        # Проверяваме дали клиентът е в център зоната
-                        if customer.coordinates and self.location_config:
-                            distance_to_center = calculate_distance_km(
-                                customer.coordinates, 
-                                self.location_config.center_location
-                            )
-                            if distance_to_center <= self.location_config.center_zone_radius_km:
-                                # Увеличаваме разходите за SPECIAL_BUS с конфигурируем множител
-                                multiplier = self.location_config.special_bus_center_penalty if self.location_config else 50000
-                                return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
+                        if _customer_is_in_center_zone(customer):
+                            multiplier = self.location_config.special_bus_center_penalty if self.location_config else 50000
+                            return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
                     
                     return int(self.distance_matrix.distances[from_node][to_node])
                 
@@ -539,16 +522,9 @@ class ORToolsSolver:
                         customer_index = to_node - len(self.unique_depots)
                         customer = self.customers[customer_index]
                         
-                        # Проверяваме дали клиентът е в център зоната
-                        if customer.coordinates and self.location_config:
-                            distance_to_center = calculate_distance_km(
-                                customer.coordinates, 
-                                self.location_config.center_location
-                            )
-                            if distance_to_center <= self.location_config.center_zone_radius_km:
-                                # Увеличаваме разходите за VRATZA_BUS с конфигурируем множител
-                                multiplier = self.location_config.vratza_bus_center_penalty if self.location_config else 100000
-                                return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
+                        if _customer_is_in_center_zone(customer):
+                            multiplier = self.location_config.vratza_bus_center_penalty if self.location_config else 100000
+                            return int(self.distance_matrix.distances[from_node][to_node] + multiplier)
                     
                     return int(self.distance_matrix.distances[from_node][to_node])
                 
@@ -738,7 +714,7 @@ class ORToolsSolver:
         logger.info(f"  - INTERNAL_BUS превозни средства: {internal_bus_vehicle_ids}")
         logger.info(f"  - SPECIAL_BUS превозни средства: {special_bus_vehicle_ids}")
         logger.info(f"  - VRATZA_BUS превозни средства: {vratza_bus_vehicle_ids}")
-        logger.info(f"  - Service time за клиенти: {data['service_times'][len(self.unique_depots)]/60:.1f} мин")
+        logger.info("  - Service time: vehicle-specific по vehicle_id")
         logger.info("--- DATA MODEL СЪЗДАДЕН ---")
         return data
 
@@ -1302,14 +1278,7 @@ class ORToolsSolver:
             service_time_seconds = vehicle_config.service_time_minutes * 60
             logger.debug(f"🕐 Използвам {vehicle_config.vehicle_type.value} service time: {vehicle_config.service_time_minutes} мин/клиент")
         else:
-            # Fallback към средна стойност
-            enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
-            if enabled_vehicles:
-                avg_service_time_minutes = sum(v.service_time_minutes for v in enabled_vehicles) / len(enabled_vehicles)
-                service_time_seconds = avg_service_time_minutes * 60
-                logger.debug(f"🕐 Използвам средна service time: {avg_service_time_minutes:.1f} мин/клиент")
-            else:
-                service_time_seconds = 15 * 60  # По подразбиране
+            service_time_seconds = 15 * 60  # Fallback only when vehicle type is unknown.
         
         # От депо до първия клиент
         current_node = depot_index
@@ -1426,9 +1395,20 @@ class ORToolsSolver:
             
             # Добавяме възможност да се пропускат клиенти (ако е разрешено)
             if self.config.allow_customer_skipping:
-                penalty = 10000000  # Много висока стойност
-                logger.info(f"🔄 Добавяне на възможност за пропускане на клиенти с голяма глоба ({penalty})")
+                logger.info("🔄 Добавяне на възможност за пропускане на клиенти с индивидуални глоби")
+                depot_locations = getattr(self, "unique_depots", None) or [getattr(self, "depot_location", None)]
+                drop_penalties = calculate_customer_drop_penalties(
+                    self.customers,
+                    depot_locations,
+                    self.config,
+                )
+                logger.info(
+                    f"  - Individual drop penalties: "
+                    f"min={min(drop_penalties) if drop_penalties else 0}, "
+                    f"max={max(drop_penalties) if drop_penalties else 0}"
+                )
                 for node in range(1, len(data['distance_matrix'])):
+                    penalty = drop_penalties[node - 1]
                     routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
                 logger.info("✅ Добавена възможност за пропускане на клиенти")
             else:

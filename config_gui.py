@@ -8,6 +8,10 @@ from tkinter import ttk, messagebox
 import sys
 import os
 import importlib
+import json
+import threading
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Добавяме текущата директория в path
 if getattr(sys, 'frozen', False):
@@ -33,8 +37,10 @@ class ConfigGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("CVRP Настройки")
-        self.root.geometry("820x700")
+        self.root.geometry("1040x760")
+        self.root.minsize(920, 640)
         self.root.resizable(True, True)
+        self._configure_style()
 
         # Зареждаме текущата конфигурация
         importlib.reload(config)
@@ -45,18 +51,54 @@ class ConfigGUI:
 
     # ── UI ────────────────────────────────────────────────────
 
+    def _configure_style(self):
+        self.root.configure(bg="#f4f6f8")
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        self.root.option_add("*Font", ("Segoe UI", 9))
+        style.configure("TFrame", background="#f4f6f8")
+        style.configure("Toolbar.TFrame", background="#ffffff")
+        style.configure("Surface.TFrame", background="#ffffff")
+        style.configure("TLabel", background="#f4f6f8", foreground="#1f2933")
+        style.configure("Surface.TLabel", background="#ffffff", foreground="#1f2933")
+        style.configure("Hint.TLabel", background="#ffffff", foreground="#667085", font=("Segoe UI", 8))
+        style.configure("AppTitle.TLabel", background="#ffffff", foreground="#111827", font=("Segoe UI", 13, "bold"))
+        style.configure("AppSubtitle.TLabel", background="#ffffff", foreground="#667085", font=("Segoe UI", 8))
+        style.configure("TLabelframe", background="#ffffff", bordercolor="#d0d5dd", relief="solid")
+        style.configure("TLabelframe.Label", background="#ffffff", foreground="#111827", font=("Segoe UI", 10, "bold"))
+        style.configure("TButton", padding=(10, 5))
+        style.configure("Primary.TButton", padding=(12, 6))
+        style.configure("TNotebook", background="#f4f6f8", borderwidth=0)
+        style.configure("TNotebook.Tab", padding=(12, 6))
+
     def _build_ui(self):
         # Toolbar
-        toolbar = ttk.Frame(self.root)
-        toolbar.pack(fill="x", padx=8, pady=(8, 0))
-        ttk.Button(toolbar, text="💾  Запази и затвори", command=self._save_and_close).pack(side="left", padx=4)
-        ttk.Button(toolbar, text="💾  Запази", command=self._save).pack(side="left", padx=4)
-        ttk.Button(toolbar, text="🚀  Запази и стартирай", command=self._save_and_run).pack(side="left", padx=4)
-        ttk.Button(toolbar, text="❌  Отказ", command=self.root.destroy).pack(side="right", padx=4)
+        toolbar = ttk.Frame(self.root, style="Toolbar.TFrame", padding=(14, 10))
+        toolbar.pack(fill="x")
+
+        title_box = ttk.Frame(toolbar, style="Toolbar.TFrame")
+        title_box.pack(side="left", fill="x", expand=True)
+        ttk.Label(title_box, text="CVRP настройки", style="AppTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            title_box,
+            text="Редакция на основните параметри за входни данни, бусове, решители и output.",
+            style="AppSubtitle.TLabel",
+        ).pack(anchor="w", pady=(2, 0))
+
+        actions = ttk.Frame(toolbar, style="Toolbar.TFrame")
+        actions.pack(side="right")
+        ttk.Button(actions, text="Запази", command=self._save).pack(side="left", padx=3)
+        ttk.Button(actions, text="Запази и затвори", command=self._save_and_close, style="Primary.TButton").pack(side="left", padx=3)
+        ttk.Button(actions, text="Запази и стартирай", command=self._save_and_run).pack(side="left", padx=3)
+        ttk.Button(actions, text="Отказ", command=self.root.destroy).pack(side="left", padx=(10, 0))
 
         # Notebook (tabs)
         nb = ttk.Notebook(self.root)
-        nb.pack(fill="both", expand=True, padx=8, pady=8)
+        nb.pack(fill="both", expand=True, padx=10, pady=10)
 
         # ─── Tab 1: Входни данни ───
         self._add_input_tab(nb)
@@ -82,12 +124,16 @@ class ConfigGUI:
     # ── Helpers ──────────────────────────────────────────────
 
     def _make_scrollable_frame(self, parent):
-        canvas = tk.Canvas(parent, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        frame = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=frame, anchor="nw")
+        shell = ttk.Frame(parent)
+        shell.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(shell, highlightthickness=0, background="#f4f6f8", borderwidth=0)
+        scrollbar = ttk.Scrollbar(shell, orient="vertical", command=canvas.yview)
+        frame = ttk.Frame(canvas, padding=(14, 12))
+        window_id = canvas.create_window((0, 0), window=frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.pack(side="left", fill="both", expand=True)
+        frame.columnconfigure(1, weight=1)
 
         def _update_scroll_visibility(event=None):
             canvas.update_idletasks()
@@ -118,6 +164,10 @@ class ConfigGUI:
         def _unbind_wheel(event):
             canvas.unbind_all("<MouseWheel>")
 
+        def _resize_inner(event):
+            canvas.itemconfigure(window_id, width=event.width)
+
+        canvas.bind("<Configure>", _resize_inner, add="+")
         canvas.bind("<Enter>", _bind_wheel)
         canvas.bind("<Leave>", _unbind_wheel)
         frame.bind("<Enter>", _bind_wheel)
@@ -125,41 +175,324 @@ class ConfigGUI:
         return frame
 
     def _add_field(self, parent, row, key, label, value, field_type="str", options=None, tooltip=""):
-        ttk.Label(parent, text=label, anchor="w").grid(row=row, column=0, sticky="w", padx=6, pady=3)
+        parent.columnconfigure(1, weight=1)
+        ttk.Label(parent, text=label, anchor="w", style="Surface.TLabel").grid(
+            row=row, column=0, sticky="w", padx=(8, 10), pady=5
+        )
 
         if field_type == "bool":
             var = tk.BooleanVar(value=value)
             cb = ttk.Checkbutton(parent, variable=var)
-            cb.grid(row=row, column=1, sticky="w", padx=6, pady=3)
+            cb.grid(row=row, column=1, sticky="w", padx=6, pady=5)
             self.widgets[key] = var
         elif field_type == "combo" and options:
             var = tk.StringVar(value=str(value))
-            combo = ttk.Combobox(parent, textvariable=var, values=options, state="readonly", width=30)
-            combo.grid(row=row, column=1, sticky="w", padx=6, pady=3)
+            combo = ttk.Combobox(parent, textvariable=var, values=options, state="readonly", width=32)
+            combo.grid(row=row, column=1, sticky="w", padx=6, pady=5)
             self.widgets[key] = var
         else:
             var = tk.StringVar(value=str(value))
-            entry = ttk.Entry(parent, textvariable=var, width=50)
-            entry.grid(row=row, column=1, sticky="we", padx=6, pady=3)
+            entry = ttk.Entry(parent, textvariable=var, width=44)
+            entry.grid(row=row, column=1, sticky="we", padx=6, pady=5)
             self.widgets[key] = var
 
         if tooltip:
-            ttk.Label(parent, text=tooltip, foreground="gray", font=("", 8)).grid(
-                row=row, column=2, sticky="w", padx=4, pady=3
+            ttk.Label(parent, text=tooltip, style="Hint.TLabel", wraplength=260).grid(
+                row=row, column=2, sticky="w", padx=(8, 4), pady=5
             )
+
+    def _add_group(self, parent, title, hint=""):
+        group = ttk.LabelFrame(parent, text=title, padding=(12, 10))
+        group.pack(fill="x", expand=True, padx=2, pady=(0, 12))
+        group.columnconfigure(1, weight=1)
+        row = 0
+        if hint:
+            ttk.Label(group, text=hint, style="Hint.TLabel", wraplength=760).grid(
+                row=row, column=0, columnspan=3, sticky="we", padx=8, pady=(0, 8)
+            )
+            row += 1
+        return group, row
 
     def _add_list_field(self, parent, row, key, label, values_list, options=None, tooltip=""):
         """Добавя поле за списък от стойности (по една на ред в Text widget)"""
-        ttk.Label(parent, text=label, anchor="w").grid(row=row, column=0, sticky="nw", padx=6, pady=3)
+        parent.columnconfigure(1, weight=1)
+        ttk.Label(parent, text=label, anchor="w", style="Surface.TLabel").grid(
+            row=row, column=0, sticky="nw", padx=(8, 10), pady=5
+        )
         text_val = "\n".join(str(v) for v in values_list)
-        text_w = tk.Text(parent, width=40, height=max(3, len(values_list)), wrap="none")
+        text_w = tk.Text(parent, width=42, height=max(3, len(values_list)), wrap="none", relief="solid", borderwidth=1)
         text_w.insert("1.0", text_val)
-        text_w.grid(row=row, column=1, sticky="we", padx=6, pady=3)
+        text_w.grid(row=row, column=1, sticky="we", padx=6, pady=5)
         self.widgets[key] = text_w
         hint = tooltip or "По един елемент на ред"
-        ttk.Label(parent, text=hint, foreground="gray", font=("", 8)).grid(
-            row=row, column=2, sticky="nw", padx=4, pady=3
+        ttk.Label(parent, text=hint, style="Hint.TLabel", wraplength=260).grid(
+            row=row, column=2, sticky="nw", padx=(8, 4), pady=5
         )
+
+    def _format_polygon_text(self, polygon):
+        return "\n".join(f"{float(lat)}, {float(lon)}" for lat, lon in polygon)
+
+    def _format_optional_coords(self, coords):
+        if not coords:
+            return ""
+        return f"{float(coords[0])}, {float(coords[1])}"
+
+    def _named_depots(self):
+        return config.get_named_depots(self.cfg.locations)
+
+    def _depot_name_for_coords(self, coords):
+        if not coords:
+            return "Главно депо"
+        for name, depot_coords in self._named_depots().items():
+            if (
+                abs(float(coords[0]) - float(depot_coords[0])) < 0.000001
+                and abs(float(coords[1]) - float(depot_coords[1])) < 0.000001
+            ):
+                return name
+        return "Главно депо"
+
+    def _format_depots_text(self, depots):
+        return "\n".join(
+            f"{name}: {float(coords[0])}, {float(coords[1])}"
+            for name, coords in (depots or {}).items()
+        )
+
+    def _parse_depots_text(self, raw):
+        depots = {}
+        for line in (raw or "").splitlines():
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+            name, coords_raw = line.split(":", 1)
+            name = name.strip()
+            try:
+                parts = [float(part.strip()) for part in coords_raw.split(",")]
+                if name and len(parts) == 2:
+                    depots[name] = (parts[0], parts[1])
+            except ValueError:
+                continue
+        return depots
+
+    def _add_depot_choice_field(self, parent, row, key, label, value, options, tooltip=""):
+        parent.columnconfigure(1, weight=1)
+        ttk.Label(parent, text=label, anchor="w", style="Surface.TLabel").grid(
+            row=row, column=0, sticky="w", padx=(8, 10), pady=5
+        )
+        var = tk.StringVar(value=value)
+        combo = ttk.Combobox(parent, textvariable=var, values=options, state="normal", width=32)
+        combo.grid(row=row, column=1, sticky="w", padx=6, pady=5)
+        self.widgets[key] = var
+        if tooltip:
+            ttk.Label(parent, text=tooltip, style="Hint.TLabel", wraplength=260).grid(
+                row=row, column=2, sticky="w", padx=(8, 4), pady=5
+            )
+
+    def _add_polygon_field(self, parent, row, key, label, polygon):
+        parent.columnconfigure(1, weight=1)
+        ttk.Label(parent, text=label, anchor="w", style="Surface.TLabel").grid(
+            row=row, column=0, sticky="nw", padx=(8, 10), pady=5
+        )
+        text_w = tk.Text(parent, width=42, height=6, wrap="none", relief="solid", borderwidth=1)
+        text_w.insert("1.0", self._format_polygon_text(polygon or []))
+        text_w.grid(row=row, column=1, sticky="we", padx=6, pady=5)
+        self.widgets[key] = text_w
+
+        box = ttk.Frame(parent, style="Surface.TFrame")
+        box.grid(row=row, column=2, sticky="nw", padx=(8, 4), pady=5)
+        ttk.Button(box, text="Чертай на карта", command=self._open_center_zone_editor).pack(anchor="w")
+        ttk.Label(
+            box,
+            text="Една точка на ред: lat, lon",
+            style="Hint.TLabel",
+        ).pack(anchor="w", pady=(4, 0))
+
+    def _parse_polygon_text(self, raw):
+        raw = (raw or "").strip()
+        if not raw:
+            return []
+
+        if raw.startswith("["):
+            try:
+                data = json.loads(raw)
+                return [(float(item[0]), float(item[1])) for item in data]
+            except Exception:
+                return []
+
+        points = []
+        for line in raw.splitlines():
+            line = line.strip().strip("[]()")
+            if not line:
+                continue
+            parts = [part.strip() for part in line.split(",")]
+            if len(parts) < 2:
+                continue
+            try:
+                points.append((float(parts[0]), float(parts[1])))
+            except ValueError:
+                continue
+        return points
+
+    def _set_center_zone_polygon(self, polygon):
+        widget = self.widgets.get("locations.center_zone_polygon")
+        if not isinstance(widget, tk.Text):
+            return
+        widget.delete("1.0", "end")
+        widget.insert("1.0", self._format_polygon_text(polygon))
+
+        mode_widget = self.widgets.get("locations.center_zone_mode")
+        if mode_widget is not None:
+            mode_widget.set("polygon")
+
+    def _open_center_zone_editor(self):
+        center_raw = self.widgets.get("locations.center_location").get()
+        try:
+            center = [float(part.strip()) for part in center_raw.split(",")[:2]]
+        except Exception:
+            center = [42.69735652560932, 23.323809998750914]
+
+        polygon_widget = self.widgets.get("locations.center_zone_polygon")
+        polygon_raw = polygon_widget.get("1.0", "end-1c") if isinstance(polygon_widget, tk.Text) else ""
+        polygon = self._parse_polygon_text(polygon_raw)
+
+        gui = self
+        server_box = {}
+
+        class Handler(BaseHTTPRequestHandler):
+            def _send(self, status, body, content_type="text/html; charset=utf-8"):
+                encoded = body.encode("utf-8")
+                self.send_response(status)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(encoded)))
+                self.end_headers()
+                self.wfile.write(encoded)
+
+            def do_GET(self):
+                self._send(200, gui._center_zone_editor_html(center, polygon))
+
+            def do_POST(self):
+                if self.path != "/save":
+                    self._send(404, "Not found", "text/plain; charset=utf-8")
+                    return
+
+                length = int(self.headers.get("Content-Length", "0"))
+                payload = self.rfile.read(length).decode("utf-8")
+                try:
+                    data = json.loads(payload)
+                    saved_polygon = [
+                        (float(point[0]), float(point[1]))
+                        for point in data.get("polygon", [])
+                    ]
+                    gui.root.after(0, lambda: gui._set_center_zone_polygon(saved_polygon))
+                    self._send(200, "OK", "text/plain; charset=utf-8")
+                    threading.Thread(target=server_box["server"].shutdown, daemon=True).start()
+                except Exception as exc:
+                    self._send(400, str(exc), "text/plain; charset=utf-8")
+
+            def log_message(self, format, *args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server_box["server"] = server
+        port = server.server_address[1]
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        webbrowser.open(f"http://127.0.0.1:{port}/")
+
+    def _center_zone_editor_html(self, center, polygon):
+        center_json = json.dumps(center)
+        polygon_json = json.dumps(polygon)
+        return f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Център зона</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+  <style>
+    html, body, #map {{ height: 100%; margin: 0; }}
+    body {{ font-family: Arial, sans-serif; }}
+    #panel {{
+      position: absolute; top: 10px; left: 50px; z-index: 1000;
+      background: white; border: 1px solid #777; border-radius: 4px;
+      padding: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }}
+    button {{ padding: 6px 10px; cursor: pointer; }}
+    #status {{ margin-left: 8px; color: #255; }}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="panel">
+    <button onclick="savePolygon()">Запази зоната</button>
+    <span id="status">Начертай или редактирай полигон.</span>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script>
+    const center = {center_json};
+    const existingPolygon = {polygon_json};
+    const map = L.map("map").setView(center, 13);
+    L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png", {{
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }}).addTo(map);
+
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    if (existingPolygon.length >= 3) {{
+      const layer = L.polygon(existingPolygon, {{ color: "#d32f2f", fillOpacity: 0.15 }});
+      drawnItems.addLayer(layer);
+      map.fitBounds(layer.getBounds(), {{ padding: [20, 20] }});
+    }}
+
+    L.marker(center).addTo(map).bindPopup("Център");
+
+    const drawControl = new L.Control.Draw({{
+      draw: {{
+        polygon: {{ allowIntersection: false, showArea: true, shapeOptions: {{ color: "#d32f2f" }} }},
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false
+      }},
+      edit: {{ featureGroup: drawnItems, remove: true }}
+    }});
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (event) {{
+      drawnItems.clearLayers();
+      drawnItems.addLayer(event.layer);
+    }});
+
+    function currentPolygon() {{
+      let coords = [];
+      drawnItems.eachLayer(function(layer) {{
+        const latLngs = layer.getLatLngs()[0] || [];
+        coords = latLngs.map(function(p) {{ return [Number(p.lat.toFixed(8)), Number(p.lng.toFixed(8))]; }});
+      }});
+      return coords;
+    }}
+
+    async function savePolygon() {{
+      const polygon = currentPolygon();
+      if (polygon.length < 3) {{
+        document.getElementById("status").textContent = "Нужни са поне 3 точки.";
+        return;
+      }}
+      const response = await fetch("/save", {{
+        method: "POST",
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ polygon }})
+      }});
+      document.getElementById("status").textContent = response.ok
+        ? "Запазено в GUI. Можеш да затвориш този прозорец."
+        : "Грешка при запис.";
+    }}
+  </script>
+</body>
+</html>"""
 
     # ── Tab: Входни данни ────────────────────────────────────
 
@@ -207,6 +540,7 @@ class ConfigGUI:
             return
 
         r = 0
+        depot_options = list(self._named_depots().keys())
         for i, v in enumerate(self.cfg.vehicles):
             vtype = v.vehicle_type.value
             label_map = {
@@ -229,6 +563,10 @@ class ConfigGUI:
             self._add_field(f, r, f"{prefix}.max_customers_per_route", "Макс. клиенти:",
                              v.max_customers_per_route if v.max_customers_per_route else "",
                              tooltip="Празно = без ограничение"); r += 1
+            self._add_depot_choice_field(f, r, f"{prefix}.start_depot_name", "Депо тръгване:",
+                                         self._depot_name_for_coords(v.start_location),
+                                         depot_options,
+                                         tooltip="Избери депо по име. Ако добавиш ново депо, можеш да напишеш името му тук след запис/презареждане."); r += 1
             self._add_field(f, r, f"{prefix}.start_time_minutes", "Старт (мин от 00:00):", v.start_time_minutes,
                              tooltip="480 = 08:00"); r += 1
 
@@ -254,36 +592,60 @@ class ConfigGUI:
         tab = ttk.Frame(nb)
         nb.add(tab, text=" ⚙️ Солвър ")
         f = self._make_scrollable_frame(tab)
-        f.columnconfigure(1, weight=1)
         c = self.cfg.cvrp
-        r = 0
-        self._add_field(f, r, "cvrp.solver_type", "Тип солвър:", c.solver_type,
+
+        basic, r = self._add_group(
+            f,
+            "Основни настройки",
+            "Избор на решител и общ лимит за търсене. PyVRP е основният режим, OR-Tools е полезен за сравнение.",
+        )
+        self._add_field(basic, r, "cvrp.solver_type", "Тип солвър:", c.solver_type,
                          "combo", ["pyvrp", "or_tools"]); r += 1
-        self._add_field(f, r, "cvrp.time_limit_seconds", "Време за решение (сек):", c.time_limit_seconds); r += 1
-        self._add_field(f, r, "cvrp.allow_customer_skipping", "Пропускане на клиенти:", c.allow_customer_skipping, "bool"); r += 1
-        self._add_field(f, r, "cvrp.distance_penalty_disjunction", "Глоба за пропускане:", c.distance_penalty_disjunction); r += 1
+        self._add_field(basic, r, "cvrp.time_limit_seconds", "Време за решение (сек):", c.time_limit_seconds); r += 1
 
-        ttk.Separator(f, orient="horizontal").grid(row=r, column=0, columnspan=3, sticky="we", pady=8); r += 1
-        ttk.Label(f, text="OR-Tools настройки:", font=("", 9, "bold")).grid(row=r, column=0, columnspan=2, sticky="w", padx=6); r += 1
+        dropping, r = self._add_group(
+            f,
+            "Пропускане на заявки",
+            "Когато всички заявки не могат да влязат в ограниченията, тези настройки управляват кои клиенти са по-лесни за оставяне за склад.",
+        )
+        self._add_field(dropping, r, "cvrp.allow_customer_skipping", "Позволи пропускане:", c.allow_customer_skipping, "bool"); r += 1
+        self._add_field(dropping, r, "cvrp.distance_penalty_disjunction", "Базова глоба:", c.distance_penalty_disjunction,
+                        tooltip="Използва се като fallback, когато приоритетното изхвърляне е изключено."); r += 1
+        self._add_field(dropping, r, "cvrp.enable_priority_dropping", "Приоритетно изхвърляне:", c.enable_priority_dropping, "bool"); r += 1
+        self._add_field(dropping, r, "cvrp.drop_volume_weight", "Тежест обем:", c.drop_volume_weight,
+                        tooltip="По-висока стойност пази по-малките заявки и прави големите по-лесни за пропускане."); r += 1
+        self._add_field(dropping, r, "cvrp.drop_closeness_weight", "Тежест близост:", c.drop_closeness_weight,
+                        tooltip="По-висока стойност прави близките до депото заявки по-лесни за пропускане."); r += 1
+        self._add_field(dropping, r, "cvrp.min_customer_drop_penalty", "Мин. глоба клиент:", c.min_customer_drop_penalty,
+                        tooltip="Най-лесните за пропускане клиенти получават тази защита."); r += 1
+        self._add_field(dropping, r, "cvrp.max_customer_drop_penalty", "Макс. глоба клиент:", c.max_customer_drop_penalty,
+                        tooltip="Най-защитените клиенти получават тази стойност."); r += 1
 
-        self._add_field(f, r, "cvrp.first_solution_strategy", "First solution:", c.first_solution_strategy,
+        ortools, r = self._add_group(
+            f,
+            "OR-Tools настройки",
+            "Тези параметри се използват при OR-Tools режима и при паралелни OR-Tools стратегии.",
+        )
+        self._add_field(ortools, r, "cvrp.first_solution_strategy", "First solution:", c.first_solution_strategy,
                          "combo", ["AUTOMATIC", "PATH_CHEAPEST_ARC", "SAVINGS", "SWEEP", "CHRISTOFIDES",
                                    "PARALLEL_CHEAPEST_INSERTION"]); r += 1
-        self._add_field(f, r, "cvrp.local_search_metaheuristic", "Метаевристика:", c.local_search_metaheuristic,
+        self._add_field(ortools, r, "cvrp.local_search_metaheuristic", "Метаевристика:", c.local_search_metaheuristic,
                          "combo", ["AUTOMATIC", "GUIDED_LOCAL_SEARCH", "SIMULATED_ANNEALING", "TABU_SEARCH"]); r += 1
-        self._add_field(f, r, "cvrp.enable_start_time_tracking", "Проследяване старт. време:", c.enable_start_time_tracking, "bool"); r += 1
-        self._add_field(f, r, "cvrp.global_start_time_minutes", "Глобално старт. време (мин):", c.global_start_time_minutes,
+        self._add_field(ortools, r, "cvrp.enable_start_time_tracking", "Проследяване старт. време:", c.enable_start_time_tracking, "bool"); r += 1
+        self._add_field(ortools, r, "cvrp.global_start_time_minutes", "Глобално старт. време (мин):", c.global_start_time_minutes,
                          tooltip="480 = 08:00"); r += 1
 
-        ttk.Separator(f, orient="horizontal").grid(row=r, column=0, columnspan=3, sticky="we", pady=8); r += 1
-        ttk.Label(f, text="Паралелно търсене (OR-Tools):", font=("", 9, "bold")).grid(row=r, column=0, columnspan=2, sticky="w", padx=6); r += 1
-
-        self._add_field(f, r, "cvrp.enable_parallel_solving", "Включено:", c.enable_parallel_solving, "bool"); r += 1
-        self._add_field(f, r, "cvrp.num_workers", "Брой процеси:", c.num_workers,
+        parallel, r = self._add_group(
+            f,
+            "Паралелно търсене",
+            "Пуска няколко OR-Tools стратегии и избира най-добрия резултат.",
+        )
+        self._add_field(parallel, r, "cvrp.enable_parallel_solving", "Включено:", c.enable_parallel_solving, "bool"); r += 1
+        self._add_field(parallel, r, "cvrp.num_workers", "Брой процеси:", c.num_workers,
                          tooltip="-1 = всички ядра без едно"); r += 1
-        self._add_list_field(f, r, "cvrp.parallel_first_solution_strategies",
+        self._add_list_field(parallel, r, "cvrp.parallel_first_solution_strategies",
                              "First solution стратегии:", c.parallel_first_solution_strategies); r += 1
-        self._add_list_field(f, r, "cvrp.parallel_local_search_metaheuristics",
+        self._add_list_field(parallel, r, "cvrp.parallel_local_search_metaheuristics",
                              "Метаевристики:", c.parallel_local_search_metaheuristics); r += 1
 
     # ── Tab: Локации ─────────────────────────────────────────
@@ -301,7 +663,18 @@ class ConfigGUI:
                          f"{loc.center_location[0]}, {loc.center_location[1]}"); r += 1
         self._add_field(f, r, "locations.vratza_depot_location", "Враца депо (lat, lon):",
                          f"{loc.vratza_depot_location[0]}, {loc.vratza_depot_location[1]}"); r += 1
+        self._add_list_field(
+            f,
+            r,
+            "locations.depot_locations",
+            "Допълнителни депа:",
+            self._format_depots_text(getattr(loc, "depot_locations", {}) or {}).splitlines(),
+            tooltip="Формат: Име: lat, lon. След запис/презареждане депото ще е налично за избор при бусове.",
+        ); r += 1
+        self._add_field(f, r, "locations.center_zone_mode", "Тип център зона:", getattr(loc, "center_zone_mode", "circle"),
+                         "combo", ["circle", "polygon"]); r += 1
         self._add_field(f, r, "locations.center_zone_radius_km", "Радиус център зона (км):", loc.center_zone_radius_km); r += 1
+        self._add_polygon_field(f, r, "locations.center_zone_polygon", "Начертана център зона:", getattr(loc, "center_zone_polygon", [])); r += 1
         self._add_field(f, r, "locations.enable_center_zone_priority", "Приоритет център зона:", loc.enable_center_zone_priority, "bool"); r += 1
         self._add_field(f, r, "locations.enable_center_zone_restrictions", "Ограничения за център:", loc.enable_center_zone_restrictions, "bool"); r += 1
         self._add_field(f, r, "locations.discount_center_bus", "Отстъпка CENTER_BUS:", loc.discount_center_bus,
@@ -556,6 +929,11 @@ class ConfigGUI:
             "cvrp.time_limit_seconds": ("time_limit_seconds", "int"),
             "cvrp.allow_customer_skipping": ("allow_customer_skipping", "bool"),
             "cvrp.distance_penalty_disjunction": ("distance_penalty_disjunction", "int"),
+            "cvrp.enable_priority_dropping": ("enable_priority_dropping", "bool"),
+            "cvrp.drop_volume_weight": ("drop_volume_weight", "float"),
+            "cvrp.drop_closeness_weight": ("drop_closeness_weight", "float"),
+            "cvrp.min_customer_drop_penalty": ("min_customer_drop_penalty", "int"),
+            "cvrp.max_customer_drop_penalty": ("max_customer_drop_penalty", "int"),
             "cvrp.first_solution_strategy": ("first_solution_strategy", "str"),
             "cvrp.local_search_metaheuristic": ("local_search_metaheuristic", "str"),
             "cvrp.enable_start_time_tracking": ("enable_start_time_tracking", "bool"),
@@ -563,6 +941,7 @@ class ConfigGUI:
             "cvrp.enable_parallel_solving": ("enable_parallel_solving", "bool"),
             "cvrp.num_workers": ("num_workers", "int"),
             # Locations
+            "locations.center_zone_mode": ("center_zone_mode", "str"),
             "locations.center_zone_radius_km": ("center_zone_radius_km", "float"),
             "locations.enable_center_zone_priority": ("enable_center_zone_priority", "bool"),
             "locations.enable_center_zone_restrictions": ("enable_center_zone_restrictions", "bool"),
@@ -614,6 +993,19 @@ class ConfigGUI:
             if gui_key in values:
                 raw = values[gui_key]
                 content = self._replace_tuple_value(content, loc_key, raw)
+
+        if "locations.center_zone_polygon" in values:
+            content = self._replace_polygon_value(
+                content,
+                "center_zone_polygon",
+                values["locations.center_zone_polygon"],
+            )
+
+        if "locations.depot_locations" in values:
+            content = self._replace_depot_locations_value(
+                content,
+                values["locations.depot_locations"],
+            )
 
         # ─── Vehicle fields ───
         if self.cfg.vehicles:
@@ -669,6 +1061,41 @@ class ConfigGUI:
             pass
         return content
 
+    def _replace_polygon_value(self, content, field_name, raw_val):
+        import re
+
+        points = self._parse_polygon_text(raw_val)
+        if points:
+            points_str = ",\n        ".join(f"({lat}, {lon})" for lat, lon in points)
+            new_block = f"field(default_factory=lambda: [\n        {points_str}\n    ])"
+        else:
+            new_block = "field(default_factory=lambda: [])"
+
+        pattern = (
+            rf'({field_name}\s*:\s*List\[Tuple\[float,\s*float\]\]\s*=\s*)'
+            rf'field\(default_factory=lambda:\s*\[.*?\]\)'
+        )
+        return re.sub(pattern, rf'\g<1>{new_block}', content, flags=re.S)
+
+    def _replace_depot_locations_value(self, content, raw_val):
+        import re
+
+        depots = self._parse_depots_text(raw_val)
+        if depots:
+            items = ",\n        ".join(
+                f'"{name}": ({coords[0]}, {coords[1]})'
+                for name, coords in depots.items()
+            )
+            new_block = f"field(default_factory=lambda: {{\n        {items}\n    }})"
+        else:
+            new_block = "field(default_factory=lambda: {})"
+
+        pattern = (
+            r'(depot_locations\s*:\s*Dict\[str,\s*Tuple\[float,\s*float\]\]\s*=\s*)'
+            r'field\(default_factory=lambda:\s*\{.*?\}\)'
+        )
+        return re.sub(pattern, rf'\g<1>{new_block}', content, flags=re.S)
+
     def _replace_list_field_value(self, content, field_name, raw_val):
         """Замества List[str] поле с field(default_factory=lambda: [...]) в config.py"""
         import re
@@ -680,6 +1107,49 @@ class ConfigGUI:
         pattern = rf'({field_name}\s*:\s*List\[str\]\s*=\s*)field\(default_factory=lambda:\s*\[.*?\]\)'
         content = re.sub(pattern, rf'\g<1>{new_block}', content, flags=re.DOTALL)
         return content
+
+    def _format_optional_tuple_value(self, raw_val):
+        raw_str = str(raw_val).strip()
+        if raw_str == "" or raw_str.lower() == "none":
+            return "None"
+
+        try:
+            parts = [float(part.strip()) for part in raw_str.split(",")]
+            if len(parts) == 2:
+                return f"({parts[0]}, {parts[1]})"
+        except ValueError:
+            return None
+        return None
+
+    def _depot_lookup_for_values(self, values):
+        depots = dict(self._named_depots())
+        extra_raw = values.get("locations.depot_locations", "")
+        depots.update(self._parse_depots_text(extra_raw))
+        return depots
+
+    def _format_depot_choice_value(self, depot_name, values):
+        name = str(depot_name).strip()
+        if not name:
+            name = "Главно депо"
+        depots = self._depot_lookup_for_values(values)
+        coords = depots.get(name)
+        if not coords:
+            return None
+        return f"({float(coords[0])}, {float(coords[1])})"
+
+    def _replace_vehicle_tuple_assignment(self, block, field, new_val):
+        import re
+
+        pattern = rf'({field}\s*=\s*)(?:None|\([^)]+\)|depot_[a-zA-Z_]+)'
+        if re.search(pattern, block):
+            return re.sub(pattern, rf'\g<1>{new_val}', block)
+
+        insert_pattern = r'(\n\s*start_time_minutes\s*=)'
+        if field == "start_location":
+            return re.sub(insert_pattern, f"\n                start_location={new_val},\\1", block, count=1)
+
+        insert_pattern = r'(\n\s*\)\s*,?)'
+        return re.sub(insert_pattern, f"\n                {field}={new_val}\\1", block, count=1)
 
     def _replace_vehicle_field(self, content, vtype, idx, values, prefix):
         """Замества полета на превозно средство в config.py"""
@@ -693,6 +1163,7 @@ class ConfigGUI:
             "max_time_hours": "int",
             "service_time_minutes": "int",
             "max_customers_per_route": "optional_int",
+            "start_depot_name": "depot_choice",
             "start_time_minutes": "int",
         }
 
@@ -733,6 +1204,19 @@ class ConfigGUI:
                         block = re.sub(rf'({field}\s*=\s*)(?:None|\d+)', rf'\g<1>{val}', block)
                     except ValueError:
                         pass
+            elif ftype == "optional_tuple":
+                new_val = self._format_optional_tuple_value(raw)
+                if new_val is None:
+                    continue
+                block = self._replace_vehicle_tuple_assignment(block, field, new_val)
+                if field == "start_location":
+                    block = self._replace_vehicle_tuple_assignment(block, "tsp_depot_location", new_val)
+            elif ftype == "depot_choice":
+                new_val = self._format_depot_choice_value(raw, values)
+                if new_val is None:
+                    continue
+                block = self._replace_vehicle_tuple_assignment(block, "start_location", new_val)
+                block = self._replace_vehicle_tuple_assignment(block, "tsp_depot_location", new_val)
 
         content = content[:block_start] + block + content[block_end:]
         return content

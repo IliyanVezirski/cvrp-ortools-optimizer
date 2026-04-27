@@ -8,14 +8,21 @@ import pandas as pd
 import requests
 import json
 import html
+import math
 from typing import List, Dict, Tuple, Optional
 import os
 import logging
-from config import get_config, OutputConfig, RoutingEngine
+from datetime import datetime
+from config import get_config, OutputConfig, RoutingEngine, is_location_in_center_zone
 from cvrp_solver import CVRPSolution, Route
 from warehouse_manager import WarehouseAllocation
 from input_handler import Customer
 from osrm_client import get_distance_matrix_from_central_cache
+
+try:
+    from folium.plugins import PolyLineTextPath
+except ImportError:
+    PolyLineTextPath = None
 
 # OpenPyXL imports за Excel стилове
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -43,6 +50,16 @@ def _normalize_output_file_path(path_value: str, default_filename: str) -> str:
     if extension:
         return normalized
     return os.path.join(normalized, default_filename)
+
+
+def _append_run_date_to_filename(file_path: str, run_date: Optional[str] = None) -> str:
+    """Append optimizer run date before the file extension."""
+    date_stamp = run_date or datetime.now().strftime("%Y-%m-%d")
+    directory, filename = os.path.split(file_path)
+    stem, extension = os.path.splitext(filename)
+    if not extension or stem.endswith(f"_{date_stamp}"):
+        return file_path
+    return os.path.join(directory, f"{stem}_{date_stamp}{extension}")
 
 # Настройки за различните типове превозни средства
 VEHICLE_SETTINGS = {
@@ -113,6 +130,7 @@ class InteractiveMapGenerator:
     
     def __init__(self, config: OutputConfig):
         self.config = config
+        self.run_date = datetime.now().strftime("%Y-%m-%d")
         # Зареждаме централната матрица
         self.central_matrix = get_distance_matrix_from_central_cache([])
         self.use_routing = False
@@ -199,6 +217,80 @@ class InteractiveMapGenerator:
             control_scale=True,
         )
 
+    def _segment_distance_m(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
+        lat1, lon1 = math.radians(start[0]), math.radians(start[1])
+        lat2, lon2 = math.radians(end[0]), math.radians(end[1])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        return 6371000 * 2 * math.asin(math.sqrt(a))
+
+    def _bearing_degrees(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
+        lat1, lon1 = math.radians(start[0]), math.radians(start[1])
+        lat2, lon2 = math.radians(end[0]), math.radians(end[1])
+        dlon = lon2 - lon1
+        y = math.sin(dlon) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+        return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+    def _direction_arrow_samples(self, points: List[Tuple[float, float]], max_arrows: int = 6):
+        clean_points = [point for point in points if point and len(point) == 2]
+        if len(clean_points) < 2:
+            return []
+
+        segments = []
+        total_m = 0.0
+        for start, end in zip(clean_points, clean_points[1:]):
+            distance_m = self._segment_distance_m(start, end)
+            if distance_m < 5:
+                continue
+            segments.append((start, end, distance_m, total_m))
+            total_m += distance_m
+
+        if total_m < 25:
+            return []
+
+        arrow_count = max(1, min(max_arrows, int(total_m // 2500) + 1))
+        targets = [(idx + 1) * total_m / (arrow_count + 1) for idx in range(arrow_count)]
+        samples = []
+
+        for target_m in targets:
+            for start, end, distance_m, segment_start_m in segments:
+                if segment_start_m <= target_m <= segment_start_m + distance_m:
+                    ratio = (target_m - segment_start_m) / distance_m
+                    lat = start[0] + (end[0] - start[0]) * ratio
+                    lon = start[1] + (end[1] - start[1]) * ratio
+                    bearing = self._bearing_degrees(start, end)
+                    samples.append(((lat, lon), bearing))
+                    break
+
+        return samples
+
+    def _add_direction_arrows(self, polyline, layer, color: str) -> None:
+        """Add direction arrows along a Folium polyline."""
+        try:
+            if PolyLineTextPath is None or polyline is None:
+                return
+
+            marker_color = html.escape(str(color), quote=True)
+            PolyLineTextPath(
+                polyline,
+                "  ►  ",
+                repeat=True,
+                offset=8,
+                attributes={
+                    "fill": marker_color,
+                    "font-weight": "bold",
+                    "font-size": "16",
+                    "stroke": "white",
+                    "stroke-width": "2",
+                    "paint-order": "stroke",
+                },
+            ).add_to(layer)
+
+        except Exception as e:
+            logger.debug(f"Could not add route direction arrows: {e}")
+
     def _get_google_maps_api_key(self) -> str:
         return (
             getattr(self.config, "google_maps_api_key", "")
@@ -207,6 +299,21 @@ class InteractiveMapGenerator:
 
     def _json_coords(self, coords: Tuple[float, float]) -> Dict[str, float]:
         return {"lat": float(coords[0]), "lng": float(coords[1])}
+
+    def _center_zone_map_data(self, locations) -> Optional[Dict]:
+        polygon = getattr(locations, "center_zone_polygon", [])
+        mode = str(getattr(locations, "center_zone_mode", "circle")).lower()
+        if mode == "polygon" and len(polygon) >= 3:
+            return {
+                "type": "polygon",
+                "path": [self._json_coords(point) for point in polygon],
+            }
+
+        return {
+            "type": "circle",
+            "center": self._json_coords(locations.center_location),
+            "radiusMeters": locations.center_zone_radius_km * 1000,
+        }
 
     def _html_popup(self, title: str, lines: List[str], color: str = "#222") -> str:
         body = "<br>".join(lines)
@@ -372,10 +479,7 @@ class InteractiveMapGenerator:
         }
 
         if cfg.locations.enable_center_zone_priority:
-            map_data["centerZone"] = {
-                "center": self._json_coords(cfg.locations.center_location),
-                "radiusMeters": cfg.locations.center_zone_radius_km * 1000,
-            }
+            map_data["centerZone"] = self._center_zone_map_data(cfg.locations)
 
         data_json = json.dumps(map_data, ensure_ascii=False)
         key_attr = html.escape(api_key, quote=True)
@@ -448,20 +552,46 @@ class InteractiveMapGenerator:
       }});
 
       if (MAP_DATA.centerZone) {{
-        new google.maps.Circle({{
-          map,
-          center: MAP_DATA.centerZone.center,
-          radius: MAP_DATA.centerZone.radiusMeters,
-          strokeColor: "#d32f2f",
-          strokeOpacity: 0.9,
-          strokeWeight: 2,
-          fillColor: "#d32f2f",
-          fillOpacity: 0.12
-        }});
-        bounds.extend(MAP_DATA.centerZone.center);
+        if (MAP_DATA.centerZone.type === "polygon") {{
+          new google.maps.Polygon({{
+            map,
+            paths: MAP_DATA.centerZone.path,
+            strokeColor: "#d32f2f",
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: "#d32f2f",
+            fillOpacity: 0.12
+          }});
+          MAP_DATA.centerZone.path.forEach((point) => bounds.extend(point));
+        }} else {{
+          new google.maps.Circle({{
+            map,
+            center: MAP_DATA.centerZone.center,
+            radius: MAP_DATA.centerZone.radiusMeters,
+            strokeColor: "#d32f2f",
+            strokeOpacity: 0.9,
+            strokeWeight: 2,
+            fillColor: "#d32f2f",
+            fillOpacity: 0.12
+          }});
+          bounds.extend(MAP_DATA.centerZone.center);
+        }}
       }}
 
       MAP_DATA.routes.forEach((route) => {{
+        const directionArrow = {{
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 3.2,
+          strokeColor: "#ffffff",
+          strokeOpacity: 0.95,
+          strokeWeight: 2,
+          fillColor: route.color,
+          fillOpacity: 0.95
+        }};
+        const directionIcons = ["22%", "44%", "66%", "88%"].map((offset) => ({{
+          icon: directionArrow,
+          offset
+        }}));
         const polylineOptions = {{
           path: route.path,
           map,
@@ -474,7 +604,9 @@ class InteractiveMapGenerator:
             icon: {{ path: "M 0,-1 0,1", strokeOpacity: 0.85, scale: 3, strokeColor: route.color }},
             offset: "0",
             repeat: "14px"
-          }}];
+          }}, ...directionIcons];
+        }} else {{
+          polylineOptions.icons = directionIcons;
         }}
         const line = new google.maps.Polyline(polylineOptions);
         line.addListener("click", (event) => {{
@@ -597,10 +729,9 @@ class InteractiveMapGenerator:
         
         # Добавяне на център зоната
         from config import get_config
-        center_location = get_config().locations.center_location
-        center_zone_radius = get_config().locations.center_zone_radius_km
-        if get_config().locations.enable_center_zone_priority:
-            self._add_center_zone_circle(route_map, center_location, center_zone_radius)
+        locations = get_config().locations
+        if locations.enable_center_zone_priority:
+            self._add_center_zone_shape(route_map, locations)
         
         # Добавяне на маршрутите с OSRM геометрия
         if self.config.show_route_colors:
@@ -656,6 +787,29 @@ class InteractiveMapGenerator:
             icon=folium.Icon(color='red', icon='star'),
             tooltip="Център"
         ).add_to(route_map)
+
+    def _add_center_zone_shape(self, route_map: folium.Map, locations):
+        polygon = getattr(locations, "center_zone_polygon", [])
+        mode = str(getattr(locations, "center_zone_mode", "circle")).lower()
+        if mode == "polygon" and len(polygon) >= 3:
+            folium.Polygon(
+                locations=polygon,
+                color="red",
+                fill=True,
+                fillColor="red",
+                fillOpacity=0.1,
+                popup=f"<b>Център зона</b><br>Полигон: {len(polygon)} точки",
+                tooltip="Център зона",
+            ).add_to(route_map)
+            folium.Marker(
+                location=locations.center_location,
+                popup=f"<b>Център</b><br>Координати: {locations.center_location[0]:.6f}, {locations.center_location[1]:.6f}",
+                icon=folium.Icon(color="red", icon="star"),
+                tooltip="Център",
+            ).add_to(route_map)
+            return
+
+        self._add_center_zone_circle(route_map, locations.center_location, locations.center_zone_radius_km)
     
     def _get_osrm_route_geometry(self, start_coords: Tuple[float, float],
                                 end_coords: Tuple[float, float]) -> List[Tuple[float, float]]:
@@ -1037,6 +1191,7 @@ class InteractiveMapGenerator:
                             popup=folium.Popup(popup_text, max_width=300)
                         )
                         polyline.add_to(bus_layer)
+                        self._add_direction_arrows(polyline, bus_layer, bus_color)
                         logger.info(f"✅ {engine_name} маршрут добавен за Автобус {route_idx + 1}: {len(route_geometry)} точки")
                     else:
                         # Fallback към прави линии
@@ -1063,6 +1218,7 @@ class InteractiveMapGenerator:
                             dashArray='5, 5'  # Пунктирана линия за показване че не е реална геометрия
                         )
                         polyline.add_to(bus_layer)
+                        self._add_direction_arrows(polyline, bus_layer, bus_color)
                         logger.warning(f"⚠️ Използвам прави линии за Автобус {route_idx + 1}")
                         
                 except Exception as e:
@@ -1098,6 +1254,7 @@ class InteractiveMapGenerator:
                         dashArray='5, 5'
                     )
                     polyline.add_to(bus_layer)
+                    self._add_direction_arrows(polyline, bus_layer, bus_color)
             
             elif route.customers:
                 # Fallback към прави линии ако routing е изключен
@@ -1116,6 +1273,7 @@ class InteractiveMapGenerator:
                     popup=f"🚌 Автобус {route_idx + 1} - {vehicle_settings['name']}"
                 )
                 polyline.add_to(bus_layer)
+                self._add_direction_arrows(polyline, bus_layer, bus_color)
         
         # Добавяме всички слоеве на автобусите към картата
         for bus_layer in bus_layers.values():
@@ -1235,8 +1393,7 @@ class InteractiveMapGenerator:
         from config import get_config
         cfg = get_config()
         if cfg.locations.enable_center_zone_priority:
-            self._add_center_zone_circle(route_map, cfg.locations.center_location,
-                                         cfg.locations.center_zone_radius_km)
+            self._add_center_zone_shape(route_map, cfg.locations)
 
         # Добавяме маршрута
         vehicle_settings = VEHICLE_SETTINGS.get(route.vehicle_type.value, {
@@ -1310,22 +1467,28 @@ class InteractiveMapGenerator:
                 try:
                     route_geometry = self._get_full_route_geometry(waypoints)
                     if len(route_geometry) > 2:
-                        folium.PolyLine(
+                        polyline = folium.PolyLine(
                             route_geometry, color=bus_color, weight=4, opacity=0.8
-                        ).add_to(bus_layer)
+                        )
                     else:
-                        folium.PolyLine(
+                        polyline = folium.PolyLine(
                             waypoints, color=bus_color, weight=3, opacity=0.6, dash_array='5, 5'
-                        ).add_to(bus_layer)
+                        )
+                    polyline.add_to(bus_layer)
+                    self._add_direction_arrows(polyline, bus_layer, bus_color)
                 except Exception as e:
                     logger.warning(f"Грешка при маршрут геометрия за маршрут {route_number}: {e}")
-                    folium.PolyLine(
+                    polyline = folium.PolyLine(
                         waypoints, color=bus_color, weight=3, opacity=0.6, dash_array='5, 5'
-                    ).add_to(bus_layer)
+                    )
+                    polyline.add_to(bus_layer)
+                    self._add_direction_arrows(polyline, bus_layer, bus_color)
             else:
-                folium.PolyLine(
+                polyline = folium.PolyLine(
                     waypoints, color=bus_color, weight=3, opacity=0.8
-                ).add_to(bus_layer)
+                )
+                polyline.add_to(bus_layer)
+                self._add_direction_arrows(polyline, bus_layer, bus_color)
 
         bus_layer.add_to(route_map)
 
@@ -1355,6 +1518,7 @@ class InteractiveMapGenerator:
             file_path or self.config.map_output_file,
             "interactive_map.html",
         )
+        file_path = _append_run_date_to_filename(file_path, self.run_date)
         
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         route_map.save(file_path)
@@ -1368,6 +1532,7 @@ class ExcelExporter:
     
     def __init__(self, config: OutputConfig):
         self.config = config
+        self.run_date = datetime.now().strftime("%Y-%m-%d")
     
     def export_all_to_single_excel(self, solution: CVRPSolution, warehouse_customers: List[Customer]) -> str:
         """Експортира всички данни в един Excel файл с отделни sheets"""
@@ -1376,6 +1541,7 @@ class ExcelExporter:
         
         # Създаваме основния файл
         file_path = os.path.join(self.config.excel_output_dir, "cvrp_report.xlsx")
+        file_path = _append_run_date_to_filename(file_path, self.run_date)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         wb = Workbook()
@@ -1403,6 +1569,9 @@ class ExcelExporter:
         wb.save(file_path)
         logger.info(f"Общ Excel отчет записан в {file_path}")
         return file_path
+
+    def _format_movement_direction(self, from_stop: str, to_stop: str) -> str:
+        return f"{from_stop} -> {to_stop}"
     
     def _create_routes_sheet(self, wb, solution: CVRPSolution):
         """Създава sheet с маршрутите"""
@@ -1411,7 +1580,7 @@ class ExcelExporter:
         # Заглавни редове
         headers = [
             'Маршрут', 'Превозно средство', 'Ред в маршрута', 
-            'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
+            'Посока на движение', 'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
             'Разстояние до центъра (км)', 'Депо стартова точка',
             'Разстояние от предишен (км)', 'Накоплено разстояние (км)',
             'Време от предишен (мин)', 'Накоплено време (мин)',
@@ -1448,6 +1617,7 @@ class ExcelExporter:
             cumulative_distance = 0
             cumulative_time = 0
             previous_customer_coords = route.depot_location  # Започваме от депото
+            previous_stop_name = "Депо"
             
             for j, customer in enumerate(route.customers):
                 # Изчисляваме разстоянието до центъра
@@ -1472,13 +1642,13 @@ class ExcelExporter:
                 total_time_with_start = start_time_minutes + cumulative_time
                 
                 # Проверяваме дали клиентът е в център зоната
-                center_zone_radius = get_config().locations.center_zone_radius_km
-                is_in_center_zone = distance_to_center <= center_zone_radius
+                is_in_center_zone = is_location_in_center_zone(customer.coordinates, get_config().locations)
                 
                 data = [
                     i + 1,  # Маршрут
                     vehicle_name,  # Превозно средство
                     j + 1,  # Ред в маршрута
+                    self._format_movement_direction(previous_stop_name, customer.name),
                     customer.id,  # ID клиент
                     customer.name,  # Име клиент
                     customer.document,  # Номер поръчка
@@ -1500,6 +1670,7 @@ class ExcelExporter:
                 
                 row += 1
                 previous_customer_coords = customer.coordinates
+                previous_stop_name = customer.name
         
         # Автоматично разширяване на колоните
         for column in ws.columns:
@@ -1843,6 +2014,7 @@ class ExcelExporter:
             return ""
         
         file_path = os.path.join(self.config.excel_output_dir, self.config.warehouse_excel_file)
+        file_path = _append_run_date_to_filename(file_path, self.run_date)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         data = []
@@ -1865,22 +2037,26 @@ class ExcelExporter:
     def export_vehicle_routes(self, solution: CVRPSolution) -> str:
         """Експортира маршрутите на превозните средства (за съвместимост)"""
         file_path = os.path.join(self.config.excel_output_dir, self.config.routes_excel_file)
+        file_path = _append_run_date_to_filename(file_path, self.run_date)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         data = []
         for i, route in enumerate(solution.routes):
             vehicle_name = VEHICLE_SETTINGS.get(route.vehicle_type.value, {}).get('name', 'Неизвестен')
+            previous_stop_name = "Депо"
             for j, customer in enumerate(route.customers):
                 data.append({
                     'Маршрут': i + 1,
                     'Превозно средство': vehicle_name,
                     'Ред в маршрута': j + 1,
+                    'Посока на движение': self._format_movement_direction(previous_stop_name, customer.name),
                     'ID клиент': customer.id,
                     'Име клиент': customer.name,
                     'Номер поръчка': customer.document,
                     'Обем (ст.)': customer.volume,
                     'GPS': customer.original_gps_data
                 })
+                previous_stop_name = customer.name
         
         df = pd.DataFrame(data)
         df.to_excel(file_path, index=False, engine='openpyxl')
@@ -1897,7 +2073,7 @@ class ExcelExporter:
         
         headers = [
             'Маршрут', 'Превозно средство', 'Ред в маршрута',
-            'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
+            'Посока на движение', 'ID клиент', 'Име клиент', 'Номер поръчка', 'Обем (ст.)', 'GPS координати',
             'Разстояние до центъра (км)', 'Депо стартова точка',
             'Разстояние от предишен (км)', 'Накоплено разстояние (км)',
             'Време от предишен (мин)', 'Накоплено време (мин)',
@@ -1919,6 +2095,7 @@ class ExcelExporter:
                 cumulative_distance = 0
                 cumulative_time = 0
                 previous_customer_coords = route.depot_location
+                previous_stop_name = "Депо"
                 
                 for j, customer in enumerate(route.customers):
                     distance_to_center = self._calculate_distance_to_center(
@@ -1936,6 +2113,7 @@ class ExcelExporter:
                         i + 1,
                         vehicle_name,
                         j + 1,
+                        self._format_movement_direction(previous_stop_name, customer.name),
                         customer.id,
                         customer.name,
                         customer.document,
@@ -1953,6 +2131,7 @@ class ExcelExporter:
                     ]
                     writer.writerow(row)
                     previous_customer_coords = customer.coordinates
+                    previous_stop_name = customer.name
         
         logger.info(f"CSV маршрути експортирани в {file_path}")
         return file_path
@@ -2203,9 +2382,9 @@ class OutputHandler:
             for idx, route in enumerate(solution.routes):
                 route_number = idx + 1
                 single_map = map_gen.create_single_route_map(route, route_number, depot_location)
-                route_file = os.path.join(routes_dir, f"{route_number}.html")
-                map_gen.save_map(single_map, route_file)
-                output_files[f'route_map_{route_number}'] = route_file
+                route_file = os.path.join(routes_dir, f"route_{route_number}.html")
+                saved_route_file = map_gen.save_map(single_map, route_file)
+                output_files[f'route_map_{route_number}'] = saved_route_file
             logger.info(f"Генерирани {len(solution.routes)} отделни HTML карти в {routes_dir}")
         
         # 2. Обединяване на всички необслужени клиенти

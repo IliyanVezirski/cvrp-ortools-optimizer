@@ -4,6 +4,7 @@
 """
 
 import os
+import math
 from dataclasses import dataclass, field
 # from tkinter import TRUE  # Премахнато за EXE съвместимост
 TRUE = True  # Заменяме tkinter.TRUE с Python True
@@ -62,6 +63,19 @@ class LocationConfig:
     depot_location: Tuple[float, float] = (42.695785029219415, 23.23165887245312)  # Главно депо, от което тръгват повечето превозни средства.
     center_location: Tuple[float, float] = (42.69735652560932, 23.323809998750914) # Специална локация "Център", използвана за CENTER_BUS.
     vratza_depot_location: Tuple[float, float] = (43.221042895146915, 23.5344026186417)  # Депо във Враца
+    depot_locations: Dict[str, Tuple[float, float]] = field(default_factory=lambda: {})
+    center_zone_mode: str = "circle"  # "circle" = радиус, "polygon" = начертана зона
+    center_zone_polygon: List[Tuple[float, float]] = field(default_factory=lambda: [
+        (42.73516132, 23.24878693),
+        (42.7076687, 23.29856873),
+        (42.71094827, 23.30062866),
+        (42.71548894, 23.30989838),
+        (42.73188302, 23.31264496),
+        (42.74196953, 23.31813812),
+        (42.75785246, 23.32122803),
+        (42.76969898, 23.28620911),
+        (42.75961698, 23.26595306)
+    ])  # Точки на полигона: [(lat, lon), ...]
     center_zone_radius_km: float = 1.9  # Радиус на център зоната в километри
     enable_center_zone_priority: bool = True  # Дали да се прилага приоритет за център зоната
     
@@ -75,9 +89,145 @@ class LocationConfig:
     
     # Параметри за градски трафик (задръствания в София)
     city_center_coords: Tuple[float, float] = (42.6977, 23.3219)  # Център на София (площад Независимост)
-    city_traffic_radius_km: float = 9.0  # Радиус на градската зона с трафик (км)
+    city_traffic_radius_km: float = 10.0  # Радиус на градската зона с трафик (км)
     city_traffic_duration_multiplier: float = 1.4 # Множител за време в града (1.35 = +35% заради трафик)
     enable_city_traffic_adjustment: bool = True  # Дали да се прилага корекция за градски трафик
+
+
+def _distance_km(coord1: Optional[Tuple[float, float]], coord2: Tuple[float, float]) -> float:
+    if not coord1 or not coord2:
+        return 0.0
+
+    lat1, lon1 = math.radians(coord1[0]), math.radians(coord1[1])
+    lat2, lon2 = math.radians(coord2[0]), math.radians(coord2[1])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+def is_point_in_polygon(point: Optional[Tuple[float, float]], polygon: List[Tuple[float, float]]) -> bool:
+    """Ray-casting point-in-polygon check for (lat, lon) coordinates."""
+    if not point or len(polygon) < 3:
+        return False
+
+    lat, lon = point
+    inside = False
+    j = len(polygon) - 1
+
+    for i in range(len(polygon)):
+        lat_i, lon_i = polygon[i]
+        lat_j, lon_j = polygon[j]
+        intersects = ((lon_i > lon) != (lon_j > lon)) and (
+            lat < (lat_j - lat_i) * (lon - lon_i) / ((lon_j - lon_i) or 1e-12) + lat_i
+        )
+        if intersects:
+            inside = not inside
+        j = i
+
+    return inside
+
+
+def is_location_in_center_zone(coords: Optional[Tuple[float, float]], location_config: LocationConfig) -> bool:
+    if not coords:
+        return False
+
+    mode = getattr(location_config, "center_zone_mode", "circle")
+    polygon = getattr(location_config, "center_zone_polygon", [])
+    if str(mode).lower() == "polygon" and len(polygon) >= 3:
+        return is_point_in_polygon(coords, polygon)
+
+    return _distance_km(coords, location_config.center_location) <= location_config.center_zone_radius_km
+
+
+def describe_center_zone(location_config: LocationConfig) -> str:
+    mode = getattr(location_config, "center_zone_mode", "circle")
+    polygon = getattr(location_config, "center_zone_polygon", [])
+    if str(mode).lower() == "polygon" and len(polygon) >= 3:
+        return f"полигон с {len(polygon)} точки"
+    return f"радиус {location_config.center_zone_radius_km} км"
+
+
+def get_named_depots(location_config: LocationConfig) -> Dict[str, Tuple[float, float]]:
+    depots = {
+        "Главно депо": location_config.depot_location,
+        "Център": location_config.center_location,
+        "Враца": location_config.vratza_depot_location,
+    }
+    depots.update(getattr(location_config, "depot_locations", {}) or {})
+    return depots
+
+def _nearest_depot_distance_km(
+    coords: Optional[Tuple[float, float]],
+    depot_locations: Any,
+) -> float:
+    if not coords or not depot_locations:
+        return float("inf")
+
+    if (
+        isinstance(depot_locations, tuple)
+        and len(depot_locations) == 2
+        and all(isinstance(value, (int, float)) for value in depot_locations)
+    ):
+        depot_iterable = [depot_locations]
+    else:
+        depot_iterable = depot_locations
+
+    distances = [
+        _distance_km(coords, depot)
+        for depot in depot_iterable
+        if depot and len(depot) == 2
+    ]
+    return min(distances) if distances else float("inf")
+
+
+def calculate_customer_drop_penalties(
+    customers: List[Any],
+    depot_locations: Any,
+    solver_config: Any,
+) -> List[int]:
+    """Return per-customer skip penalties/prizes.
+
+    Higher volume and closer-to-depot customers get lower values, so they are
+    the first candidates for skipping when constraints cannot all be satisfied.
+    """
+    base_penalty = int(getattr(solver_config, "distance_penalty_disjunction", 45000))
+    if not getattr(solver_config, "enable_priority_dropping", False):
+        return [base_penalty for _ in customers]
+
+    min_penalty = max(1, int(getattr(solver_config, "min_customer_drop_penalty", 20000)))
+    max_penalty = max(min_penalty, int(getattr(solver_config, "max_customer_drop_penalty", 120000)))
+    volume_weight = max(0.0, float(getattr(solver_config, "drop_volume_weight", 0.70)))
+    closeness_weight = max(0.0, float(getattr(solver_config, "drop_closeness_weight", 0.30)))
+    total_weight = volume_weight + closeness_weight or 1.0
+
+    volumes = [max(0.0, float(getattr(customer, "volume", 0.0) or 0.0)) for customer in customers]
+    distances = [
+        _nearest_depot_distance_km(getattr(customer, "coordinates", None), depot_locations)
+        for customer in customers
+    ]
+
+    max_volume = max(volumes) if volumes else 0.0
+    finite_distances = [distance for distance in distances if math.isfinite(distance)]
+    max_distance = max(finite_distances) if finite_distances else 0.0
+
+    penalties: List[int] = []
+    penalty_range = max_penalty - min_penalty
+
+    for volume, distance in zip(volumes, distances):
+        volume_score = volume / max_volume if max_volume > 0 else 0.0
+        closeness_score = 0.0
+        if max_distance > 0 and math.isfinite(distance):
+            closeness_score = 1.0 - min(distance / max_distance, 1.0)
+
+        drop_score = (
+            volume_score * volume_weight + closeness_score * closeness_weight
+        ) / total_weight
+        penalty = max_penalty - int(round(drop_score * penalty_range))
+        penalties.append(max(min_penalty, min(max_penalty, penalty)))
+
+    return penalties
+
 
 @dataclass
 class RoutingConfig:
@@ -133,9 +283,9 @@ class OSRMConfig:
 @dataclass
 class InputConfig:
     """Конфигурации за обработка на входните данни от Excel файл или HTTP JSON."""
-    input_source: str = "http_json"  # Източник на данни: "excel" или "http_json"
-    excel_file_path: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\data/input.xlsx") # Път до входния Excel файл.
-    json_url: str = "http://sio.effect.bg:7080/lubiv_Bizant"  # URL за HTTP JSON източник (използва се когато input_source="http_json")
+    input_source: str = "excel"  # Източник на данни: "excel" или "http_json"
+    excel_file_path: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\input/input.xlsx") # Път до входния Excel файл.
+    json_url: str = "http://sio.effect.bg:7080/lubiv_Bizant"  # URL за HTTP JSON източник (използва се когато input_source="excel")
     json_gps_field: str = "GPS"          # Име на JSON полето с GPS координати.
     json_client_id_field: str = "IdCust"  # Име на JSON полето с клиентски номер.
     json_client_name_field: str = "CustName"  # Име на JSON полето с име на клиента.
@@ -172,7 +322,7 @@ class CVRPConfig:
     algorithm: str = "or_tools"  # Основен алгоритъм. В момента се поддържа само "or_tools".
 
     # --- Основни параметри на търсенето ---
-    time_limit_seconds: int = 30
+    time_limit_seconds: int = 120
     # Описание: Максимално време в секунди, което solver-ът има за намиране на решение.
 
     first_solution_strategy: str = "PARALLEL_CHEAPEST_INSERTION"
@@ -212,6 +362,13 @@ class CVRPConfig:
     # По-голяма стойност = по-трудно пропускане на клиенти (по-малка вероятност клиент да бъде пропуснат).
 
     # --- Настройки за паралелна обработка ---
+    enable_priority_dropping: bool = True
+    # True = large close-to-depot customers get lower skip penalty/prize.
+    drop_volume_weight: float = 0.70
+    drop_closeness_weight: float = 0.30
+    min_customer_drop_penalty: int = 45000
+    max_customer_drop_penalty: int = 150000
+
     enable_parallel_solving: bool = False  # Keep disabled for PyVRP stability
     # Описание: Дали да се стартират няколко solver-а паралелно с различни стратегии.
     
@@ -266,8 +423,8 @@ class OutputConfig:
     """Конфигурации за генериране на изходни файлове (карти, Excel отчети, графики)."""
     # Интерактивна карта
     enable_interactive_map: bool = True # Дали да се генерира HTML файл с интерактивна карта на маршрутите.
-    map_output_file: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/interactive_map.html") # Път и име на файла за картата.
-    routes_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/routes") # Директория за отделните HTML карти на маршрутите.
+    map_output_file: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\output/interactive_map.html") # Път и име на файла за картата.
+    routes_output_dir: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\output/routes") # Директория за отделните HTML карти на маршрутите.
     map_provider: str = "osm" # Кой визуален слой да се използва: "google" или "osm".
     folium_tiles: str = "Esri.WorldStreetMap" # Фонов слой за Folium/OpenStreetMap режим. Не използва официалния OSM tile сървър.
     google_maps_api_key: str = os.environ.get("GOOGLE_MAPS_API_KEY", "") # Google Maps JavaScript API key за визуализация.
@@ -276,17 +433,17 @@ class OutputConfig:
     show_vehicle_info: bool = True # Дали да се показва информация за превозното средство при клик на маршрут.
     
     # Excel файлове
-    excel_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/excel") # Директория за запис на Excel отчетите.
+    excel_output_dir: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\output/excel") # Директория за запис на Excel отчетите.
     warehouse_excel_file: str = "warehouse_orders.xlsx" # Име на файла с необслужените клиенти (за склада).
     routes_excel_file: str = "vehicle_routes.xlsx" # Име на файла с детайли за всеки маршрут.
     efficiency_excel_file: str = "efficiency_report.xlsx" # Име на файла с отчет за ефективността.
     
     # CSV файл с маршрути
-    csv_output_file: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/routes.csv") # Път и име на CSV файла с маршрутите.
+    csv_output_file: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\output/routes.csv") # Път и име на CSV файла с маршрутите.
     
     # Графики и анализи
     enable_charts: bool = True # Дали да се генерират PNG файлове с графики.
-    charts_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/charts") # Директория за запис на графиките.
+    charts_output_dir: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\output/charts") # Директория за запис на графиките.
     efficiency_chart_file: str = "efficiency_analysis.png" # Графика с анализ на ефективността.
     route_comparison_file: str = "route_comparison.png" # Графика, сравняваща маршрутите.
     volume_distribution_file: str = "volume_distribution.png" # Графика с разпределението на обемите.
@@ -372,7 +529,7 @@ class MainConfig:
             VehicleConfig(
                 vehicle_type=VehicleType.INTERNAL_BUS,
                 capacity=385,
-                count=7,
+                count=6,
                 max_distance_km=None, # Премахнато
                 max_time_hours=8,
                 service_time_minutes=7,
@@ -399,14 +556,14 @@ class MainConfig:
             # 3. Външни бусове - 3 бр, 360 ст.
             VehicleConfig(
                 vehicle_type=VehicleType.EXTERNAL_BUS,
-                capacity=385,
-                count=3,
+                capacity=320,
+                count=1,
                 max_distance_km=None, # Премахнато
-                max_time_hours=20,   
+                max_time_hours=8,   
                 service_time_minutes=7, # КОРИГИРАНО
-                enabled=False,
+                enabled=True,
                 max_customers_per_route=None,
-                start_location=depot_center,  # Тръгва от главното депо
+                start_location=depot_main,  # Тръгва от главното депо
                 start_time_minutes=450,  # 7:30
                 tsp_depot_location=depot_main  # TSP оптимизация от главното депо
             ),

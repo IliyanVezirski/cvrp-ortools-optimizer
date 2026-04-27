@@ -23,7 +23,7 @@ except ImportError:
     PYVRP_AVAILABLE = False
     logging.warning("PyVRP ne e instaliran. Shte se izpolzva OR-Tools.")
 
-from config import CVRPConfig, VehicleConfig, LocationConfig
+from config import CVRPConfig, VehicleConfig, LocationConfig, calculate_customer_drop_penalties
 from input_handler import Customer
 from osrm_client import DistanceMatrix
 from warehouse_manager import WarehouseAllocation
@@ -151,11 +151,8 @@ class PyVRPSolver:
         logger.info(f"Center zone customers: {len(center_zone_customer_ids)}")
 
         # 3. Добавяме клиенти
-        avg_service_time = 15  # минути по подразбиране
         enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
-        if enabled_vehicles:
-            avg_service_time = sum(v.service_time_minutes for v in enabled_vehicles) / len(enabled_vehicles)
-        service_duration_s = int(avg_service_time * 60)  # в секунди
+        service_duration_s = 0  # Добавя се vehicle-specific в edge durations.
         
         client_objects = []  # За референция към client обекти
         client_in_center = []  # Булев списък дали клиентът е в центъра
@@ -163,9 +160,18 @@ class PyVRPSolver:
         # Определяме дали да позволим пропускане на клиенти
         # Prize е "наградата" за обслужване - колкото по-висока, толкова по-малко вероятно е да се пропусне
         allow_dropping = self.config.allow_customer_skipping if hasattr(self.config, 'allow_customer_skipping') else True
-        drop_penalty = self.config.distance_penalty_disjunction if hasattr(self.config, 'distance_penalty_disjunction') else 100000
+        drop_penalties = calculate_customer_drop_penalties(
+            self.customers,
+            self.unique_depots,
+            self.config,
+        )
         
-        logger.info(f"Customer dropping: {'enabled' if allow_dropping else 'disabled'}, penalty={drop_penalty}")
+        logger.info(
+            f"Customer dropping: {'enabled' if allow_dropping else 'disabled'}, "
+            f"penalty/prize range="
+            f"{min(drop_penalties) if drop_penalties else 0}.."
+            f"{max(drop_penalties) if drop_penalties else 0}"
+        )
         
         for idx, customer in enumerate(self.customers):
             lat, lon = customer.coordinates if customer.coordinates else (0, 0)
@@ -179,7 +185,7 @@ class PyVRPSolver:
             
             # Prize пропорционална на обема - по-големи клиенти са по-важни
             # Ако allow_dropping=False, клиентите са required=True
-            client_prize = int(drop_penalty + delivery * 100) if allow_dropping else 0
+            client_prize = int(drop_penalties[idx]) if allow_dropping else 0
             
             # Model.add_client приема параметри директно
             # delivery има 2 измерения: [volume, 1 stop]
@@ -196,11 +202,7 @@ class PyVRPSolver:
             all_locations.append(client)
             logger.debug(f"  - Client {idx}: ID={customer.id}, volume={delivery}, center={is_in_center}, prize={client_prize}")
 
-        # 4. Създаваме profiles за различните типове бусове
-        # Profile 0 = CENTER_BUS (отстъпка за център)
-        # Profile 1 = Останали бусове (глоба за център)
-        
-        # Определяме penalties от конфигурацията
+        # 4. Създаваме профил за всеки тип бус, за да има точен service time.
         center_discount = self.location_config.discount_center_bus if self.location_config else 0.10
         center_penalty = 50000  # Голяма глоба за не-CENTER бусове в центъра
         
@@ -213,13 +215,19 @@ class PyVRPSolver:
                 self.location_config.vratza_bus_center_penalty
             )
         
-        # Добавяме профил за CENTER_BUS (profile 0 е по подразбиране)
-        center_bus_profile = model.add_profile()
-        logger.info(f"Added CENTER_BUS profile: {center_bus_profile}")
-        
-        # Добавяме профил за другите бусове
-        other_bus_profile = model.add_profile()
-        logger.info(f"Added OTHER_BUS profile: {other_bus_profile}")
+        vehicle_profiles = {}
+        vehicle_service_times = {}
+        profile_vehicle_configs = {}
+        for v_config in enabled_vehicles:
+            v_key = v_config.vehicle_type.value
+            if v_key in vehicle_profiles:
+                continue
+            vehicle_profiles[v_key] = model.add_profile()
+            vehicle_service_times[v_key] = int(v_config.service_time_minutes * 60)
+            profile_vehicle_configs[v_key] = v_config
+            logger.info(
+                f"Added profile for {v_key}: service time {v_config.service_time_minutes} мин/клиент"
+            )
 
         # 5. Добавяме edges за всички профили
         num_locations = len(all_locations)
@@ -290,44 +298,37 @@ class PyVRPSolver:
                     if client_idx < len(client_in_center):
                         is_dest_center_client = client_in_center[client_idx]
                 
-                # Базов edge (без профил) - използва се ако няма специфичен профил
+                # Базов edge (без профил) - без service time.
                 model.add_edge(
                     frm=all_locations[i],
                     to=all_locations[j],
                     distance=base_distance,
                     duration=duration
                 )
-                
-                # Edge за CENTER_BUS профил:
-                # - Голяма отстъпка за клиенти в центъра (плаща 10% от разстоянието)
-                # - Голяма глоба за клиенти ИЗВЪН центъра (да не излиза от центъра)
-                if is_dest_center_client:
-                    center_bus_distance = int(base_distance * center_discount)  # 10% от разстоянието
-                else:
-                    # CENTER_BUS получава PENALTY за клиенти извън центъра
-                    center_bus_distance = base_distance + int(center_penalty)
-                    
-                model.add_edge(
-                    frm=all_locations[i],
-                    to=all_locations[j],
-                    distance=center_bus_distance,
-                    duration=duration,
-                    profile=center_bus_profile
-                )
-                
-                # Edge за OTHER_BUS профил - глоба за център
-                if is_dest_center_client:
-                    other_bus_distance = base_distance + int(center_penalty)
-                else:
-                    other_bus_distance = base_distance
-                    
-                model.add_edge(
-                    frm=all_locations[i],
-                    to=all_locations[j],
-                    distance=other_bus_distance,
-                    duration=duration,
-                    profile=other_bus_profile
-                )
+
+                for v_key, v_config in profile_vehicle_configs.items():
+                    vehicle_duration = duration
+                    if i >= num_depots:
+                        vehicle_duration += vehicle_service_times.get(v_key, 15 * 60)
+
+                    if v_config.vehicle_type == ConfigVehicleType.CENTER_BUS:
+                        if is_dest_center_client:
+                            vehicle_distance = int(base_distance * center_discount)
+                        else:
+                            vehicle_distance = base_distance + int(center_penalty)
+                    else:
+                        if is_dest_center_client:
+                            vehicle_distance = base_distance + int(center_penalty)
+                        else:
+                            vehicle_distance = base_distance
+
+                    model.add_edge(
+                        frm=all_locations[i],
+                        to=all_locations[j],
+                        distance=vehicle_distance,
+                        duration=vehicle_duration,
+                        profile=vehicle_profiles[v_key]
+                    )
 
         if enable_traffic:
             locations_in_city_count = sum(locations_in_city)
@@ -369,13 +370,8 @@ class PyVRPSolver:
             # Max customers per route (ако не е зададено, използваме голямо число)
             max_customers = v_config.max_customers_per_route if v_config.max_customers_per_route else 1000
 
-            # Определяме профила според типа бус
-            if v_config.vehicle_type == ConfigVehicleType.CENTER_BUS:
-                vehicle_profile = center_bus_profile
-                profile_name = "CENTER (discount)"
-            else:
-                vehicle_profile = other_bus_profile
-                profile_name = "OTHER (penalty)"
+            vehicle_profile = vehicle_profiles[v_config.vehicle_type.value]
+            profile_name = f"{v_config.vehicle_type.value} ({v_config.service_time_minutes} мин service)"
 
             # Model.add_vehicle_type с двумерен capacity: [volume, max_stops]
             model.add_vehicle_type(
@@ -481,17 +477,18 @@ class PyVRPSolver:
                 else:
                     depot_location = self.unique_depots[0]
 
+                # Opredelyame tipa prevozno sredstvo ot marshuta
+                vehicle_type = self._get_vehicle_type_from_route(route, vehicle_types_list)
+                vehicle_config = self._get_vehicle_config_for_type(vehicle_type)
+
                 # Izchislyavaem tochnoto vreme i razstoyanie
                 route_distance_m, route_time_s = self._calculate_route_metrics(
-                    route_customers, depot_location
+                    route_customers, depot_location, vehicle_config
                 )
                 
                 total_distance_km += route_distance_m / 1000
                 total_time_minutes += route_time_s / 60
                 total_volume += route_volume
-
-                # Opredelyame tipa prevozno sredstvo ot marshuta
-                vehicle_type = self._get_vehicle_type_from_route(route, vehicle_types_list)
 
                 route_obj = Route(
                     vehicle_type=vehicle_type,
@@ -530,7 +527,10 @@ class PyVRPSolver:
         return solution
 
     def _calculate_route_metrics(
-        self, customers: List[Customer], depot_location: Tuple[float, float]
+        self,
+        customers: List[Customer],
+        depot_location: Tuple[float, float],
+        vehicle_config: Optional[VehicleConfig] = None,
     ) -> Tuple[float, float]:
         """
         Изчислява разстояние и време за маршрут.
@@ -562,10 +562,10 @@ class PyVRPSolver:
         # От депо до първия клиент
         current_node = depot_index
         
-        avg_service_time_s = 15 * 60  # подразбиране 15 минути
-        enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
-        if enabled_vehicles:
-            avg_service_time_s = sum(v.service_time_minutes for v in enabled_vehicles) / len(enabled_vehicles) * 60
+        if vehicle_config:
+            service_time_s = vehicle_config.service_time_minutes * 60
+        else:
+            service_time_s = 15 * 60
 
         # === ГРАДСКИ ТРАФИК: Настройки и определяне кои локации са в града ===
         enable_traffic = False
@@ -615,7 +615,7 @@ class PyVRPSolver:
                 if locations_in_city[current_node] and locations_in_city[customer_matrix_idx]:
                     travel_time = travel_time * traffic_multiplier
             total_time += travel_time
-            total_time += avg_service_time_s  # service time
+            total_time += service_time_s  # vehicle-specific service time
 
             current_node = customer_matrix_idx
 
@@ -628,6 +628,16 @@ class PyVRPSolver:
         total_time += travel_time_back
 
         return total_distance, total_time
+
+    def _get_vehicle_config_for_type(self, vehicle_type) -> Optional[VehicleConfig]:
+        vehicle_type_value = getattr(vehicle_type, "value", str(vehicle_type))
+        for v_config in self.vehicle_configs:
+            if v_config.enabled and v_config.vehicle_type.value == vehicle_type_value:
+                return v_config
+        for v_config in self.vehicle_configs:
+            if v_config.enabled:
+                return v_config
+        return None
 
     def _get_vehicle_type_from_route(self, route, vehicle_types_list) -> str:
         """
