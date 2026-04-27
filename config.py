@@ -62,7 +62,7 @@ class LocationConfig:
     depot_location: Tuple[float, float] = (42.695785029219415, 23.23165887245312)  # Главно депо, от което тръгват повечето превозни средства.
     center_location: Tuple[float, float] = (42.69735652560932, 23.323809998750914) # Специална локация "Център", използвана за CENTER_BUS.
     vratza_depot_location: Tuple[float, float] = (43.221042895146915, 23.5344026186417)  # Депо във Враца
-    center_zone_radius_km: float = 1.7  # Радиус на център зоната в километри
+    center_zone_radius_km: float = 1.9  # Радиус на център зоната в километри
     enable_center_zone_priority: bool = True  # Дали да се прилага приоритет за център зоната
     
     # Параметри за глобата на останалите бусове за влизане в центъра
@@ -71,7 +71,7 @@ class LocationConfig:
     special_bus_center_penalty: float = 40000.0    # Множител за глоба на SPECIAL_BUS за влизане в центъра
     vratza_bus_center_penalty: float = 40000.0   # Множител за глоба на VRATZA_BUS за влизане в центъра (като EXTERNAL_BUS)
     enable_center_zone_restrictions: bool = True  # Дали да се прилагат ограничения за влизане в центъра
-    discount_center_bus: float = 0.5  # Отстъпка за CENTER_BUS в център зоната (намалява разходите с 90%)
+    discount_center_bus: float = 0.9  # Отстъпка за CENTER_BUS в център зоната (намалява разходите с 90%)
     
     # Параметри за градски трафик (задръствания в София)
     city_center_coords: Tuple[float, float] = (42.6977, 23.3219)  # Център на София (площад Независимост)
@@ -133,15 +133,15 @@ class OSRMConfig:
 @dataclass
 class InputConfig:
     """Конфигурации за обработка на входните данни от Excel файл или HTTP JSON."""
-    input_source: str = "excel"  # Източник на данни: "excel" или "http_json"
+    input_source: str = "http_json"  # Източник на данни: "excel" или "http_json"
     excel_file_path: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\data/input.xlsx") # Път до входния Excel файл.
-    json_url: str = ""  # URL за HTTP JSON източник (използва се когато input_source="http_json")
+    json_url: str = "http://sio.effect.bg:7080/lubiv_Bizant"  # URL за HTTP JSON източник (използва се когато input_source="http_json")
     json_gps_field: str = "GPS"          # Име на JSON полето с GPS координати.
     json_client_id_field: str = "IdCust"  # Име на JSON полето с клиентски номер.
     json_client_name_field: str = "CustName"  # Име на JSON полето с име на клиента.
     json_volume_field: str = "Volume"     # Име на JSON полето с брой стекове.
     json_document_field: str = "IdDoc"  # Име на JSON полето с номер на документа.
-    json_override_date: str = ""  # Конкретна дата (DD/MM/YYYY). Ако е празно, автоматично се изчислява следващият работен ден.
+    json_override_date: str = "28/04/2026"  # Конкретна дата (DD/MM/YYYY). Ако е празно, автоматично се изчислява следващият работен ден.
     json_timeout_seconds: int = 30  # Таймаут за HTTP заявката в секунди.
     gps_column: str = "GPS"         # Име на колоната с GPS координатите на клиентите.
     client_id_column: str = "IdCust"      # Име на колоната с ID на клиента.
@@ -172,7 +172,7 @@ class CVRPConfig:
     algorithm: str = "or_tools"  # Основен алгоритъм. В момента се поддържа само "or_tools".
 
     # --- Основни параметри на търсенето ---
-    time_limit_seconds: int = 120
+    time_limit_seconds: int = 30
     # Описание: Максимално време в секунди, което solver-ът има за намиране на решение.
 
     first_solution_strategy: str = "PARALLEL_CHEAPEST_INSERTION"
@@ -266,24 +266,27 @@ class OutputConfig:
     """Конфигурации за генериране на изходни файлове (карти, Excel отчети, графики)."""
     # Интерактивна карта
     enable_interactive_map: bool = True # Дали да се генерира HTML файл с интерактивна карта на маршрутите.
-    map_output_file: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/interactive_map.html") # Път и име на файла за картата.
-    routes_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/routes") # Директория за отделните HTML карти на маршрутите.
+    map_output_file: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/interactive_map.html") # Път и име на файла за картата.
+    routes_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/routes") # Директория за отделните HTML карти на маршрутите.
+    map_provider: str = "osm" # Кой визуален слой да се използва: "google" или "osm".
+    folium_tiles: str = "Esri.WorldStreetMap" # Фонов слой за Folium/OpenStreetMap режим. Не използва официалния OSM tile сървър.
+    google_maps_api_key: str = os.environ.get("GOOGLE_MAPS_API_KEY", "") # Google Maps JavaScript API key за визуализация.
     map_zoom_level: int = 12 # Начално приближение на картата.
     show_route_colors: bool = True # Дали различните маршрути да се оцветяват в различни цветове.
     show_vehicle_info: bool = True # Дали да се показва информация за превозното средство при клик на маршрут.
     
     # Excel файлове
-    excel_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/excel") # Директория за запис на Excel отчетите.
+    excel_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/excel") # Директория за запис на Excel отчетите.
     warehouse_excel_file: str = "warehouse_orders.xlsx" # Име на файла с необслужените клиенти (за склада).
     routes_excel_file: str = "vehicle_routes.xlsx" # Име на файла с детайли за всеки маршрут.
     efficiency_excel_file: str = "efficiency_report.xlsx" # Име на файла с отчет за ефективността.
     
     # CSV файл с маршрути
-    csv_output_file: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/routes.csv") # Път и име на CSV файла с маршрутите.
+    csv_output_file: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/routes.csv") # Път и име на CSV файла с маршрутите.
     
     # Графики и анализи
     enable_charts: bool = True # Дали да се генерират PNG файлове с графики.
-    charts_output_dir: str = _abs_path("e:\Programing\Opti_route\cvrp-ortools-optimizer\output/charts") # Директория за запис на графиките.
+    charts_output_dir: str = _abs_path("E:\Programing\Bizan_2.0\cvrp-ortools-optimizer\output/charts") # Директория за запис на графиките.
     efficiency_chart_file: str = "efficiency_analysis.png" # Графика с анализ на ефективността.
     route_comparison_file: str = "route_comparison.png" # Графика, сравняваща маршрутите.
     volume_distribution_file: str = "volume_distribution.png" # Графика с разпределението на обемите.

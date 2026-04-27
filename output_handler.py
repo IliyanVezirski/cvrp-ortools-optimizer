@@ -7,6 +7,7 @@ import folium
 import pandas as pd
 import requests
 import json
+import html
 from typing import List, Dict, Tuple, Optional
 import os
 import logging
@@ -96,6 +97,17 @@ BUS_COLORS = [
 ]
 
 
+class GoogleMapDocument:
+    """Small save-compatible wrapper for generated Google Maps HTML."""
+
+    def __init__(self, html_content: str):
+        self.html_content = html_content
+
+    def save(self, file_path: str) -> None:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(self.html_content)
+
+
 class InteractiveMapGenerator:
     """Генератор на интерактивна карта"""
     
@@ -141,6 +153,406 @@ class InteractiveMapGenerator:
                 logger.warning(f"⚠️ Не мога да се свържа с OSRM сървъра: {e}")
                 logger.warning("   Ще използвам прави линии за маршрутите")
                 self.use_routing = False
+
+    def _use_google_maps(self) -> bool:
+        return getattr(self.config, "map_provider", "osm").strip().lower() == "google"
+
+    def _create_folium_map(self, location: Tuple[float, float]) -> folium.Map:
+        tiles = getattr(self.config, "folium_tiles", "Esri.WorldStreetMap") or "Esri.WorldStreetMap"
+        custom_tiles = {
+            "esri.worldstreetmap": {
+                "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+                "attr": "Tiles &copy; Esri",
+                "name": "Esri WorldStreetMap",
+            },
+            "esri.worldtopomap": {
+                "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+                "attr": "Tiles &copy; Esri",
+                "name": "Esri WorldTopoMap",
+            },
+            "esri.worldimagery": {
+                "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                "attr": "Tiles &copy; Esri",
+                "name": "Esri WorldImagery",
+            },
+        }
+        provider = custom_tiles.get(tiles.strip().lower())
+        if provider:
+            return folium.Map(
+                location=location,
+                zoom_start=self.config.map_zoom_level,
+                tiles=provider["url"],
+                attr=provider["attr"],
+                control_scale=True,
+            )
+        return folium.Map(
+            location=location,
+            zoom_start=self.config.map_zoom_level,
+            tiles=tiles,
+            control_scale=True,
+        )
+
+    def _get_google_maps_api_key(self) -> str:
+        return (
+            getattr(self.config, "google_maps_api_key", "")
+            or os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        ).strip()
+
+    def _json_coords(self, coords: Tuple[float, float]) -> Dict[str, float]:
+        return {"lat": float(coords[0]), "lng": float(coords[1])}
+
+    def _html_popup(self, title: str, lines: List[str], color: str = "#222") -> str:
+        body = "<br>".join(lines)
+        return (
+            '<div style="font-family:Arial,sans-serif;max-width:300px">'
+            f'<h4 style="margin:0 0 6px;color:{html.escape(color)}">{html.escape(title)}</h4>'
+            '<hr style="margin:5px 0">'
+            f"{body}</div>"
+        )
+
+    def _get_route_visual_geometry(
+        self,
+        route: Route,
+    ) -> Tuple[List[Tuple[float, float]], bool, str]:
+        route_depot = route.depot_location
+        waypoints = [route_depot]
+        for customer in route.customers:
+            if customer.coordinates:
+                waypoints.append(customer.coordinates)
+        waypoints.append(route_depot)
+
+        if not route.customers:
+            return waypoints, False, "Няма клиенти"
+
+        if not self.use_routing:
+            return waypoints, True, "Прави линии"
+
+        engine_name = (
+            "Valhalla"
+            if self.routing_engine and self.routing_engine.value == RoutingEngine.VALHALLA.value
+            else "OSRM"
+        )
+        try:
+            route_geometry = self._get_full_route_geometry(waypoints)
+            if len(route_geometry) > 2:
+                return route_geometry, False, f"{engine_name} маршрут"
+        except Exception as e:
+            logger.warning(f"Грешка при геометрия за Google карта: {e}")
+
+        return waypoints, True, f"{engine_name} fallback"
+
+    def _build_google_routes(self, routes: List[Route], start_number: int = 1) -> List[Dict[str, object]]:
+        google_routes = []
+        for route_idx, route in enumerate(routes):
+            route_number = start_number + route_idx
+            vehicle_settings = VEHICLE_SETTINGS.get(route.vehicle_type.value, {
+                "color": "gray",
+                "icon": "circle",
+                "prefix": "fa",
+                "name": "Неизвестен",
+            })
+            bus_color = BUS_COLORS[(route_number - 1) % len(BUS_COLORS)]
+            geometry, dashed, geometry_label = self._get_route_visual_geometry(route)
+
+            markers = []
+            for client_idx, customer in enumerate(route.customers):
+                if not customer.coordinates:
+                    continue
+                client_number = client_idx + 1
+                popup_html = self._html_popup(
+                    f"Автобус {route_number} - {vehicle_settings['name']}",
+                    [
+                        f"<b>Клиент:</b> {html.escape(str(customer.name))}",
+                        f"<b>ID:</b> {html.escape(str(customer.id))}",
+                        f"<b>Ред в маршрута:</b> #{client_number}",
+                        f"<b>Обем:</b> {customer.volume:.2f} ст.",
+                        f"<b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}",
+                        (
+                            f'<a href="https://www.google.com/maps/dir/?api=1&destination='
+                            f'{customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving" '
+                            f'target="_blank" '
+                            f'style="display:inline-block;margin-top:8px;padding:6px 10px;'
+                            f'background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">'
+                            f'Навигация</a>'
+                        ),
+                    ],
+                    bus_color,
+                )
+                markers.append({
+                    "position": self._json_coords(customer.coordinates),
+                    "number": client_number,
+                    "title": f"#{client_number}: {customer.name}",
+                    "popup": popup_html,
+                })
+
+            popup_html = self._html_popup(
+                f"Автобус {route_number} - {vehicle_settings['name']}",
+                [
+                    f"<b>{geometry_label}:</b> {'прави линии' if dashed else 'реална геометрия'}",
+                    f"<b>Клиенти:</b> {len(route.customers)}",
+                    f"<b>Разстояние:</b> {route.total_distance_km:.1f} км",
+                    f"<b>Време:</b> {route.total_time_minutes:.0f} мин",
+                    f"<b>Обем:</b> {route.total_volume:.1f} ст.",
+                    f"<b>Геометрия:</b> {len(geometry)} точки",
+                ],
+                bus_color,
+            )
+            google_routes.append({
+                "id": f"route-{route_number}",
+                "name": f"Автобус {route_number} ({len(route.customers)} клиента)",
+                "color": bus_color,
+                "vehicleName": vehicle_settings["name"],
+                "markers": markers,
+                "path": [self._json_coords(point) for point in geometry],
+                "dashed": dashed,
+                "popup": popup_html,
+                "distanceKm": route.total_distance_km,
+                "timeMin": route.total_time_minutes,
+                "volume": route.total_volume,
+            })
+        return google_routes
+
+    def _depot_name(self, depot: Tuple[float, float]) -> str:
+        locations = get_config().locations
+        if depot == locations.center_location:
+            return "Център депо"
+        if depot == locations.vratza_depot_location:
+            return "Депо Враца"
+        return "Главно депо"
+
+    def _build_google_html(
+        self,
+        title: str,
+        center: Tuple[float, float],
+        routes: List[Route],
+        depot_locations: List[Tuple[float, float]],
+        single_route_number: Optional[int] = None,
+    ) -> GoogleMapDocument:
+        api_key = self._get_google_maps_api_key()
+        if not api_key:
+            return GoogleMapDocument(
+                "<!doctype html><html><head><meta charset='utf-8'><title>Missing Google Maps API key</title>"
+                "<style>body{font-family:Arial,sans-serif;margin:32px;line-height:1.5}</style></head><body>"
+                "<h2>Missing Google Maps API key</h2>"
+                "<p>Set output.google_maps_api_key in config.py or set the GOOGLE_MAPS_API_KEY environment variable.</p>"
+                "</body></html>"
+            )
+
+        cfg = get_config()
+        route_start = single_route_number or 1
+        map_data = {
+            "title": title,
+            "center": self._json_coords(center),
+            "zoom": self.config.map_zoom_level,
+            "depots": [
+                {
+                    "position": self._json_coords(depot),
+                    "name": self._depot_name(depot),
+                    "popup": self._html_popup(self._depot_name(depot), [
+                        f"<b>Координати:</b> {depot[0]:.6f}, {depot[1]:.6f}"
+                    ]),
+                }
+                for depot in depot_locations
+            ],
+            "centerZone": None,
+            "routes": self._build_google_routes(routes, route_start),
+            "totals": {
+                "distanceKm": sum(route.total_distance_km for route in routes),
+                "timeMin": sum(route.total_time_minutes for route in routes),
+                "volume": sum(route.total_volume for route in routes),
+                "routeCount": len(routes),
+            },
+        }
+
+        if cfg.locations.enable_center_zone_priority:
+            map_data["centerZone"] = {
+                "center": self._json_coords(cfg.locations.center_location),
+                "radiusMeters": cfg.locations.center_zone_radius_km * 1000,
+            }
+
+        data_json = json.dumps(map_data, ensure_ascii=False)
+        key_attr = html.escape(api_key, quote=True)
+        html_content = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)}</title>
+  <style>
+    html, body, #map {{ height: 100%; margin: 0; }}
+    body {{ font-family: Arial, sans-serif; }}
+    #legend {{
+      position: absolute; top: 10px; left: 10px; z-index: 5; width: 290px;
+      background: #fff; border: 1px solid #777; border-radius: 5px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25); padding: 10px; font-size: 13px;
+      max-height: calc(100vh - 40px); overflow: auto;
+    }}
+    #route-filter {{
+      position: absolute; top: 10px; right: 10px; z-index: 5; max-width: 290px;
+      background: #fff; border: 1px solid #777; border-radius: 5px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25); padding: 10px; font-size: 13px;
+      max-height: calc(100vh - 40px); overflow: auto;
+    }}
+    .route-row {{ display: flex; align-items: center; gap: 6px; margin: 4px 0; }}
+    .swatch {{ width: 14px; height: 14px; display: inline-block; border-radius: 2px; }}
+    .marker-label {{
+      color: #fff; font-weight: 700; font-size: 13px; text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,.8);
+    }}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="legend"></div>
+  <div id="route-filter"></div>
+  <script>
+    const MAP_DATA = {data_json};
+    let infoWindow;
+
+    function initMap() {{
+      const map = new google.maps.Map(document.getElementById("map"), {{
+        center: MAP_DATA.center,
+        zoom: MAP_DATA.zoom,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true
+      }});
+      infoWindow = new google.maps.InfoWindow();
+      const bounds = new google.maps.LatLngBounds();
+      const routeObjects = {{}};
+
+      MAP_DATA.depots.forEach((depot) => {{
+        const marker = new google.maps.Marker({{
+          position: depot.position,
+          map,
+          title: depot.name,
+          label: {{ text: "D", color: "white", fontWeight: "bold" }},
+          icon: {{
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: "#111111",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2
+          }}
+        }});
+        marker.addListener("click", () => infoWindow.setContent(depot.popup) || infoWindow.open(map, marker));
+        bounds.extend(depot.position);
+      }});
+
+      if (MAP_DATA.centerZone) {{
+        new google.maps.Circle({{
+          map,
+          center: MAP_DATA.centerZone.center,
+          radius: MAP_DATA.centerZone.radiusMeters,
+          strokeColor: "#d32f2f",
+          strokeOpacity: 0.9,
+          strokeWeight: 2,
+          fillColor: "#d32f2f",
+          fillOpacity: 0.12
+        }});
+        bounds.extend(MAP_DATA.centerZone.center);
+      }}
+
+      MAP_DATA.routes.forEach((route) => {{
+        const polylineOptions = {{
+          path: route.path,
+          map,
+          strokeColor: route.color,
+          strokeOpacity: route.dashed ? 0 : 0.82,
+          strokeWeight: route.dashed ? 0 : 4
+        }};
+        if (route.dashed) {{
+          polylineOptions.icons = [{{
+            icon: {{ path: "M 0,-1 0,1", strokeOpacity: 0.85, scale: 3, strokeColor: route.color }},
+            offset: "0",
+            repeat: "14px"
+          }}];
+        }}
+        const line = new google.maps.Polyline(polylineOptions);
+        line.addListener("click", (event) => {{
+          infoWindow.setContent(route.popup);
+          infoWindow.setPosition(event.latLng);
+          infoWindow.open(map);
+        }});
+
+        const markers = route.markers.map((point) => {{
+          const marker = new google.maps.Marker({{
+            position: point.position,
+            map,
+            title: point.title,
+            label: {{ text: String(point.number), color: "white", fontWeight: "bold" }},
+            icon: {{
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 13,
+              fillColor: route.color,
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 3
+            }}
+          }});
+          marker.addListener("click", () => infoWindow.setContent(point.popup) || infoWindow.open(map, marker));
+          bounds.extend(point.position);
+          return marker;
+        }});
+
+        route.path.forEach((point) => bounds.extend(point));
+        routeObjects[route.id] = {{ line, markers }};
+      }});
+
+      if (!bounds.isEmpty()) {{
+        map.fitBounds(bounds, 40);
+      }}
+      renderLegend();
+      renderFilter(routeObjects);
+    }}
+
+    function renderLegend() {{
+      const totals = MAP_DATA.totals;
+      document.getElementById("legend").innerHTML = `
+        <h4 style="margin:0 0 8px;text-align:center">${{MAP_DATA.title}}</h4>
+        <div><b>Депо:</b> черен маркер D</div>
+        <hr>
+        <div><b>Статистики:</b></div>
+        <div>Общо разстояние: ${{totals.distanceKm.toFixed(1)}} км</div>
+        <div>Общо време: ${{totals.timeMin.toFixed(0)}} мин</div>
+        <div>Общ обем: ${{totals.volume.toFixed(1)}} ст.</div>
+        <div>Маршрути: ${{totals.routeCount}}</div>
+      `;
+    }}
+
+    function renderFilter(routeObjects) {{
+      const container = document.getElementById("route-filter");
+      container.innerHTML = "<b>Филтър на автобуси</b>";
+      MAP_DATA.routes.forEach((route) => {{
+        const row = document.createElement("label");
+        row.className = "route-row";
+        row.innerHTML = `
+          <input type="checkbox" checked data-route="${{route.id}}">
+          <span class="swatch" style="background:${{route.color}}"></span>
+          <span>${{route.name}}</span>
+        `;
+        container.appendChild(row);
+      }});
+      Object.values(routeObjects).forEach((objects) => {{
+        const map = objects.line.getMap();
+        objects.line.set("mapRef", map);
+      }});
+      container.querySelectorAll("input[type=checkbox]").forEach((checkbox) => {{
+        checkbox.addEventListener("change", () => {{
+          const objects = routeObjects[checkbox.dataset.route];
+          const map = checkbox.checked ? objects.line.get("mapRef") : null;
+          objects.line.setMap(map);
+          objects.markers.forEach((marker) => marker.setMap(map));
+        }});
+      }});
+    }}
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key={key_attr}&callback=initMap"></script>
+</body>
+</html>
+"""
+        return GoogleMapDocument(html_content)
     
     def create_map(self, solution: CVRPSolution, warehouse_allocation: WarehouseAllocation,
                   depot_location: Tuple[float, float]) -> folium.Map:
@@ -161,13 +573,17 @@ class InteractiveMapGenerator:
         for route in solution.routes:
             if hasattr(route, 'depot_location') and route.depot_location:
                 unique_depots.add(route.depot_location)
+
+        if self._use_google_maps():
+            return self._build_google_html(
+                "Интерактивна карта",
+                depot_location,
+                solution.routes,
+                list(unique_depots),
+            )
         
         # Инициализация на картата с основното депо като център
-        route_map = folium.Map(
-            location=depot_location,
-            zoom_start=self.config.map_zoom_level,
-            tiles='OpenStreetMap'
-        )
+        route_map = self._create_folium_map(depot_location)
         
         # Добавяне на всички депа
         self._add_depot_markers(route_map, list(unique_depots))
@@ -543,7 +959,12 @@ class InteractiveMapGenerator:
                         <b>ID:</b> {customer.id}<br>
                         <b>Ред в маршрута:</b> #{client_number}<br>
                         <b>Обем:</b> {customer.volume:.2f} ст.<br>
-                        <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}
+                        <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination={customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving"
+                           target="_blank"
+                           style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
+                            Навигация
+                        </a>
                     </div>
                     """
                     
@@ -696,7 +1117,7 @@ class InteractiveMapGenerator:
         # Добавяме LayerControl за филтър
         folium.LayerControl(
             position='topright',
-            collapsed=False,
+            collapsed=True,
             overlay=True,
             control=True
                 ).add_to(route_map)
@@ -789,11 +1210,16 @@ class InteractiveMapGenerator:
         else:
             center = route_depot
 
-        route_map = folium.Map(
-            location=center,
-            zoom_start=self.config.map_zoom_level,
-            tiles='OpenStreetMap'
-        )
+        if self._use_google_maps():
+            return self._build_google_html(
+                f"Маршрут {route_number}",
+                center,
+                [route],
+                [route_depot],
+                single_route_number=route_number,
+            )
+
+        route_map = self._create_folium_map(center)
 
         # Добавяме маркер за депото
         self._add_depot_markers(route_map, [route_depot])
@@ -844,7 +1270,12 @@ class InteractiveMapGenerator:
                     <b>ID:</b> {customer.id}<br>
                     <b>Ред в маршрута:</b> #{client_number}<br>
                     <b>Обем:</b> {customer.volume:.2f} ст.<br>
-                    <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}
+                    <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination={customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving"
+                       target="_blank"
+                       style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
+                        Навигация
+                    </a>
                 </div>
                 """
                 folium.Marker(

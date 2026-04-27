@@ -338,6 +338,12 @@ class ConfigGUI:
         self._add_field(f, r, "output.map_output_file", "Файл карта:", out.map_output_file); r += 1
         self._add_field(f, r, "output.routes_output_dir", "Директория HTML маршрути:", out.routes_output_dir,
                          tooltip="Отделни HTML файлове за всеки маршрут"); r += 1
+        self._add_field(f, r, "output.map_provider", "Map provider:", out.map_provider,
+                         tooltip='google за Google Maps визуализация или osm за стария Folium/OpenStreetMap режим'); r += 1
+        self._add_field(f, r, "output.folium_tiles", "Folium tiles:", out.folium_tiles,
+                         tooltip='Например "Esri.WorldStreetMap", "Esri.WorldTopoMap", "CartoDB Voyager"'); r += 1
+        self._add_field(f, r, "output.google_maps_api_key", "Google Maps API key:", out.google_maps_api_key,
+                         tooltip="Ключ само за Maps JavaScript API. Може и чрез GOOGLE_MAPS_API_KEY env variable."); r += 1
 
         ttk.Separator(f, orient="horizontal").grid(row=r, column=0, columnspan=3, sticky="we", pady=8); r += 1
         ttk.Label(f, text="Excel:", font=("", 9, "bold")).grid(row=r, column=0, columnspan=2, sticky="w", padx=6); r += 1
@@ -572,6 +578,9 @@ class ConfigGUI:
             "output.enable_interactive_map": ("enable_interactive_map", "bool"),
             "output.map_output_file": ("map_output_file", "path"),
             "output.routes_output_dir": ("routes_output_dir", "path"),
+            "output.map_provider": ("map_provider", "str"),
+            "output.folium_tiles": ("folium_tiles", "str"),
+            "output.google_maps_api_key": ("google_maps_api_key", "str"),
             "output.excel_output_dir": ("excel_output_dir", "path"),
             "output.routes_excel_file": ("routes_excel_file", "str"),
             "output.warehouse_excel_file": ("warehouse_excel_file", "str"),
