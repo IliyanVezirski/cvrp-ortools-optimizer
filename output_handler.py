@@ -178,13 +178,20 @@ class InteractiveMapGenerator:
         }
         provider = custom_tiles.get(tiles.strip().lower())
         if provider:
-            return folium.Map(
+            route_map = folium.Map(
                 location=location,
                 zoom_start=self.config.map_zoom_level,
-                tiles=provider["url"],
-                attr=provider["attr"],
+                tiles=None,
                 control_scale=True,
             )
+            folium.TileLayer(
+                tiles=provider["url"],
+                attr=provider["attr"],
+                name=provider["name"],
+                overlay=False,
+                control=True,
+            ).add_to(route_map)
+            return route_map
         return folium.Map(
             location=location,
             zoom_start=self.config.map_zoom_level,
