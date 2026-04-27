@@ -4,6 +4,7 @@
 """
 
 import folium
+from branca.element import MacroElement, Template
 import pandas as pd
 import requests
 import json
@@ -112,6 +113,96 @@ BUS_COLORS = [
     '#D2691E',  # Шоколадов
     '#DC143C'   # Тъмно червен
 ]
+
+
+class SingleRouteCustomerPanel(MacroElement):
+    """Leaflet control with clickable customer list for single route maps."""
+
+    _template = Template(
+        """
+        {% macro script(this, kwargs) %}
+        (function() {
+            const map = {{ this._parent.get_name() }};
+            const panelHtml = {{ this.panel_html|safe }};
+            const clients = {{ this.clients|safe }};
+            const css = {{ this.css|safe }};
+
+            if (!document.getElementById("route-client-panel-style")) {
+                const style = document.createElement("style");
+                style.id = "route-client-panel-style";
+                style.textContent = css;
+                document.head.appendChild(style);
+            }
+
+            const panel = L.control({ position: "topright" });
+            panel.onAdd = function() {
+                const container = L.DomUtil.create("div", "route-client-control");
+                container.innerHTML = `
+                    <button type="button" class="route-client-toggle">Клиенти</button>
+                    <div class="route-client-panel route-client-panel-hidden">${panelHtml}</div>
+                `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            };
+            panel.addTo(map);
+
+            function setPanelOpen(isOpen) {
+                const panelEl = document.querySelector(".route-client-panel");
+                const buttonEl = document.querySelector(".route-client-toggle");
+                if (!panelEl || !buttonEl) return;
+                panelEl.classList.toggle("route-client-panel-hidden", !isOpen);
+                buttonEl.classList.toggle("route-client-toggle-hidden", isOpen);
+            }
+
+            function openClient(index) {
+                const item = clients[index];
+                if (!item) return;
+                const marker = window[item.markerName];
+                if (!marker) return;
+                map.setView([item.lat, item.lng], Math.max(map.getZoom(), 15), { animate: true });
+                marker.openPopup();
+            }
+
+            setTimeout(function() {
+                const toggle = document.querySelector(".route-client-toggle");
+                const closeButton = document.querySelector(".route-client-close");
+                if (toggle) {
+                    toggle.addEventListener("click", function() {
+                        setPanelOpen(true);
+                    });
+                }
+                if (closeButton) {
+                    closeButton.addEventListener("click", function(event) {
+                        event.preventDefault();
+                        setPanelOpen(false);
+                    });
+                }
+
+                document.querySelectorAll(".route-client-card").forEach(function(row) {
+                    row.addEventListener("click", function(event) {
+                        if (event.target.closest("a")) return;
+                        openClient(Number(row.dataset.clientIndex));
+                    });
+                    row.addEventListener("keydown", function(event) {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openClient(Number(row.dataset.clientIndex));
+                        }
+                    });
+                });
+            }, 0);
+        })();
+        {% endmacro %}
+        """
+    )
+
+    def __init__(self, panel_html: str, clients: List[Dict[str, object]], css: str):
+        super().__init__()
+        self._name = "SingleRouteCustomerPanel"
+        self.panel_html = json.dumps(panel_html, ensure_ascii=False)
+        self.clients = json.dumps(clients, ensure_ascii=False)
+        self.css = json.dumps(css, ensure_ascii=False)
 
 
 class GoogleMapDocument:
@@ -275,13 +366,13 @@ class InteractiveMapGenerator:
             marker_color = html.escape(str(color), quote=True)
             PolyLineTextPath(
                 polyline,
-                "  ►  ",
+                "        \u25ba        ",
                 repeat=True,
                 offset=8,
                 attributes={
                     "fill": marker_color,
                     "font-weight": "bold",
-                    "font-size": "16",
+                    "font-size": "14",
                     "stroke": "white",
                     "stroke-width": "2",
                     "paint-order": "stroke",
@@ -397,6 +488,10 @@ class InteractiveMapGenerator:
                     "number": client_number,
                     "title": f"#{client_number}: {customer.name}",
                     "popup": popup_html,
+                    "customerName": str(customer.name),
+                    "customerId": str(customer.id),
+                    "volume": customer.volume,
+                    "navigationUrl": self._navigation_url(customer.coordinates),
                 })
 
             popup_html = self._html_popup(
@@ -470,6 +565,7 @@ class InteractiveMapGenerator:
             ],
             "centerZone": None,
             "routes": self._build_google_routes(routes, route_start),
+            "singleRouteNumber": single_route_number,
             "totals": {
                 "distanceKm": sum(route.total_distance_km for route in routes),
                 "timeMin": sum(route.total_time_minutes for route in routes),
@@ -504,6 +600,28 @@ class InteractiveMapGenerator:
       box-shadow: 0 2px 12px rgba(0,0,0,.25); padding: 10px; font-size: 13px;
       max-height: calc(100vh - 40px); overflow: auto;
     }}
+    #route-filter.collapsed {{
+      background: transparent; border: 0; box-shadow: none; padding: 0; overflow: visible;
+    }}
+    .client-toggle {{
+      border: 1px solid rgba(35,35,35,.35); border-radius: 6px; background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,.22); color: #222; cursor: pointer;
+      font-size: 13px; font-weight: 700; padding: 8px 11px;
+    }}
+    .client-toggle:hover {{ background: #f4f7fb; }}
+    .client-panel.hidden, .client-toggle.hidden {{ display: none; }}
+    .client-panel {{
+      width: 340px; max-height: calc(100vh - 90px); overflow: auto;
+      background: #fff; border: 1px solid rgba(35,35,35,.35); border-radius: 6px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.22); padding: 10px;
+    }}
+    .client-panel-header {{ display: flex; align-items: center; justify-content: space-between; gap: 8px; }}
+    .client-panel-header b {{ font-size: 15px; }}
+    .client-close {{
+      width: 26px; height: 26px; border: 0; border-radius: 4px; background: #f1f3f4;
+      color: #333; cursor: pointer; font-size: 18px; line-height: 1; font-weight: 700;
+    }}
+    .client-close:hover {{ background: #e4e7eb; }}
     .route-row {{ display: flex; align-items: center; gap: 6px; margin: 4px 0; }}
     .swatch {{ width: 14px; height: 14px; display: inline-block; border-radius: 2px; }}
     .marker-label {{
@@ -581,14 +699,14 @@ class InteractiveMapGenerator:
       MAP_DATA.routes.forEach((route) => {{
         const directionArrow = {{
           path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: 3.2,
+          scale: 2.8,
           strokeColor: "#ffffff",
           strokeOpacity: 0.95,
           strokeWeight: 2,
           fillColor: route.color,
           fillOpacity: 0.95
         }};
-        const directionIcons = ["22%", "44%", "66%", "88%"].map((offset) => ({{
+        const directionIcons = ["35%", "70%"].map((offset) => ({{
           icon: directionArrow,
           offset
         }}));
@@ -615,7 +733,7 @@ class InteractiveMapGenerator:
           infoWindow.open(map);
         }});
 
-        const markers = route.markers.map((point) => {{
+        const markerObjects = route.markers.map((point) => {{
           const marker = new google.maps.Marker({{
             position: point.position,
             map,
@@ -632,18 +750,22 @@ class InteractiveMapGenerator:
           }});
           marker.addListener("click", () => infoWindow.setContent(point.popup) || infoWindow.open(map, marker));
           bounds.extend(point.position);
-          return marker;
+          return {{ marker, data: point }};
         }});
 
         route.path.forEach((point) => bounds.extend(point));
-        routeObjects[route.id] = {{ line, markers }};
+        routeObjects[route.id] = {{
+          line,
+          markers: markerObjects.map((item) => item.marker),
+          markerObjects
+        }};
       }});
 
       if (!bounds.isEmpty()) {{
         map.fitBounds(bounds, 40);
       }}
       renderLegend();
-      renderFilter(routeObjects);
+      renderFilter(routeObjects, map);
     }}
 
     function renderLegend() {{
@@ -660,8 +782,12 @@ class InteractiveMapGenerator:
       `;
     }}
 
-    function renderFilter(routeObjects) {{
+    function renderFilter(routeObjects, map) {{
       const container = document.getElementById("route-filter");
+      if (MAP_DATA.singleRouteNumber) {{
+        renderCustomerPanel(container, routeObjects, map);
+        return;
+      }}
       container.innerHTML = "<b>Филтър на автобуси</b>";
       MAP_DATA.routes.forEach((route) => {{
         const row = document.createElement("label");
@@ -684,6 +810,59 @@ class InteractiveMapGenerator:
           objects.line.setMap(map);
           objects.markers.forEach((marker) => marker.setMap(map));
         }});
+      }});
+    }}
+
+    function renderCustomerPanel(container, routeObjects, map) {{
+      const route = MAP_DATA.routes[0];
+      const objects = routeObjects[route.id];
+      container.classList.add("collapsed");
+      container.innerHTML = `
+        <button type="button" class="client-toggle">Клиенти</button>
+        <div class="client-panel hidden">
+          <div class="client-panel-header">
+            <b>Клиенти - маршрут ${{MAP_DATA.singleRouteNumber}}</b>
+            <button type="button" class="client-close" title="Затвори">×</button>
+          </div>
+          <div style="margin:5px 0 8px;color:#555;font-size:12px;text-align:center">${{route.markers.length}} клиента · ${{route.volume.toFixed(1)}} стека</div>
+          <div class="client-list"></div>
+        </div>
+      `;
+      const toggle = container.querySelector(".client-toggle");
+      const panel = container.querySelector(".client-panel");
+      const close = container.querySelector(".client-close");
+      const list = container.querySelector(".client-list");
+      function setOpen(isOpen) {{
+        container.classList.toggle("collapsed", !isOpen);
+        panel.classList.toggle("hidden", !isOpen);
+        toggle.classList.toggle("hidden", isOpen);
+      }}
+      toggle.addEventListener("click", () => setOpen(true));
+      close.addEventListener("click", () => setOpen(false));
+      route.markers.forEach((point, index) => {{
+        const row = document.createElement("div");
+        row.className = "route-row";
+        row.style.cursor = "pointer";
+        row.style.borderTop = "1px solid #ececec";
+        row.style.padding = "7px 0";
+        row.innerHTML = `
+          <span class="swatch" style="background:${{route.color}};border-radius:50%;color:#fff;text-align:center;line-height:14px;font-size:10px;font-weight:bold">${{point.number}}</span>
+          <span style="flex:1;min-width:0">
+            <span style="display:block;font-weight:bold;font-size:12px;overflow-wrap:anywhere">${{point.customerName}}</span>
+            <span style="display:block;color:#666;font-size:11px">ID: ${{point.customerId}} · ${{Number(point.volume).toFixed(2)}} ст.</span>
+          </span>
+          <a href="${{point.navigationUrl}}" target="_blank" rel="noopener"
+             style="padding:5px 7px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;font-size:11px">Навигация</a>
+        `;
+        row.addEventListener("click", (event) => {{
+          if (event.target.closest("a")) return;
+          const marker = objects.markerObjects[index].marker;
+          map.panTo(marker.getPosition());
+          map.setZoom(Math.max(map.getZoom(), 15));
+          infoWindow.setContent(point.popup);
+          infoWindow.open(map, marker);
+        }});
+        list.appendChild(row);
       }});
     }}
   </script>
@@ -1354,6 +1533,344 @@ class InteractiveMapGenerator:
         # Добавяме легендата към картата
         legend_element = folium.Element(legend_html)
         route_map.get_root().add_child(legend_element)
+
+    def _navigation_url(self, coords: Tuple[float, float]) -> str:
+        return (
+            "https://www.google.com/maps/dir/?api=1&destination="
+            f"{coords[0]:.6f},{coords[1]:.6f}&travelmode=driving"
+        )
+
+    def _add_single_route_customer_panel(
+        self,
+        route_map: folium.Map,
+        route: Route,
+        route_number: int,
+        bus_color: str,
+        marker_entries: List[Dict[str, object]],
+    ) -> None:
+        if not marker_entries:
+            return
+
+        rows = []
+        panel_data = []
+        for idx, entry in enumerate(marker_entries):
+            number = int(entry["number"])
+            name = html.escape(str(entry["name"]))
+            customer_id = html.escape(str(entry["id"]))
+            volume = float(entry["volume"])
+            nav_url = html.escape(str(entry["navigation_url"]), quote=True)
+            rows.append(
+                f'''
+                <div class="route-client-card" role="button" tabindex="0" data-client-index="{idx}">
+                    <div class="route-client-number" style="background:{html.escape(bus_color, quote=True)}">{number}</div>
+                    <div class="route-client-main">
+                        <div class="route-client-name">{name}</div>
+                        <div class="route-client-meta">ID: {customer_id} · {volume:.2f} ст.</div>
+                    </div>
+                    <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                </div>
+                '''
+            )
+            panel_data.append(
+                {
+                    "markerName": entry["marker_name"],
+                    "lat": entry["lat"],
+                    "lng": entry["lng"],
+                }
+            )
+
+        panel_json = json.dumps(panel_data, ensure_ascii=False)
+        map_name = route_map.get_name()
+        panel_html = f'''
+        <style>
+            .route-client-panel {{
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                width: 340px;
+                max-height: calc(100vh - 34px);
+                overflow: auto;
+                z-index: 9999;
+                background: #ffffff;
+                border: 1px solid rgba(35, 35, 35, 0.35);
+                border-radius: 6px;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+                padding: 10px;
+                font-family: Arial, sans-serif;
+                color: #222;
+            }}
+            .route-client-panel h4 {{
+                margin: 0 0 8px;
+                font-size: 15px;
+                text-align: center;
+            }}
+            .route-client-summary {{
+                margin: 0 0 8px;
+                font-size: 12px;
+                color: #555;
+                text-align: center;
+            }}
+            .route-client-card {{
+                display: grid;
+                grid-template-columns: 30px 1fr auto;
+                gap: 8px;
+                align-items: center;
+                padding: 7px 6px;
+                border-top: 1px solid #ececec;
+                cursor: pointer;
+            }}
+            .route-client-card:hover, .route-client-card:focus {{
+                background: #f4f7fb;
+                outline: none;
+            }}
+            .route-client-number {{
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                border: 2px solid #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+            }}
+            .route-client-name {{
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }}
+            .route-client-meta {{
+                font-size: 11px;
+                color: #666;
+                margin-top: 2px;
+            }}
+            .route-client-nav {{
+                display: inline-block;
+                padding: 5px 7px;
+                border-radius: 4px;
+                background: #1a73e8;
+                color: #fff !important;
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: 700;
+                white-space: nowrap;
+            }}
+            @media (max-width: 700px) {{
+                .route-client-panel {{
+                    left: 8px;
+                    right: 8px;
+                    bottom: 8px;
+                    top: auto;
+                    width: auto;
+                    max-height: 42vh;
+                }}
+            }}
+        </style>
+        <div class="route-client-panel">
+            <h4>Клиенти - маршрут {route_number}</h4>
+            <div class="route-client-summary">{len(route.customers)} клиента · {route.total_volume:.1f} стека</div>
+            {''.join(rows)}
+        </div>
+        <script>
+            (function() {{
+                const map = {map_name};
+                const clients = {panel_json};
+
+                function openClient(index) {{
+                    const item = clients[index];
+                    if (!item) return;
+                    const marker = window[item.markerName];
+                    if (!marker) return;
+                    map.setView([item.lat, item.lng], Math.max(map.getZoom(), 15), {{ animate: true }});
+                    marker.openPopup();
+                }}
+
+                document.querySelectorAll(".route-client-card").forEach((row) => {{
+                    row.addEventListener("click", (event) => {{
+                        if (event.target.closest("a")) return;
+                        openClient(Number(row.dataset.clientIndex));
+                    }});
+                    row.addEventListener("keydown", (event) => {{
+                        if (event.key === "Enter" || event.key === " ") {{
+                            event.preventDefault();
+                            openClient(Number(row.dataset.clientIndex));
+                        }}
+                    }});
+                }});
+            }})();
+        </script>
+        '''
+        route_map.get_root().add_child(folium.Element(panel_html))
+
+    def _add_single_route_customer_control(
+        self,
+        route_map: folium.Map,
+        route: Route,
+        route_number: int,
+        bus_color: str,
+        marker_entries: List[Dict[str, object]],
+    ) -> None:
+        if not marker_entries:
+            return
+
+        rows = []
+        panel_data = []
+        safe_color = html.escape(bus_color, quote=True)
+        for idx, entry in enumerate(marker_entries):
+            number = int(entry["number"])
+            name = html.escape(str(entry["name"]))
+            customer_id = html.escape(str(entry["id"]))
+            volume = float(entry["volume"])
+            nav_url = html.escape(str(entry["navigation_url"]), quote=True)
+            rows.append(
+                f'''
+                <div class="route-client-card" role="button" tabindex="0" data-client-index="{idx}">
+                    <div class="route-client-number" style="background:{safe_color}">{number}</div>
+                    <div class="route-client-main">
+                        <div class="route-client-name">{name}</div>
+                        <div class="route-client-meta">ID: {customer_id} &middot; {volume:.2f} ст.</div>
+                    </div>
+                    <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                </div>
+                '''
+            )
+            panel_data.append({
+                "markerName": entry["marker_name"],
+                "lat": entry["lat"],
+                "lng": entry["lng"],
+            })
+
+        panel_html = f'''
+            <div class="route-client-header">
+                <h4>Клиенти - маршрут {route_number}</h4>
+                <button type="button" class="route-client-close" title="Затвори">×</button>
+            </div>
+            <div class="route-client-summary">{len(route.customers)} клиента &middot; {route.total_volume:.1f} стека</div>
+            {''.join(rows)}
+        '''
+        panel_css = '''
+            .route-client-control {
+                font-family: Arial, sans-serif;
+            }
+            .route-client-toggle {
+                border: 1px solid rgba(35, 35, 35, 0.35);
+                border-radius: 6px;
+                background: #ffffff;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+                color: #222;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 700;
+                padding: 8px 11px;
+            }
+            .route-client-toggle:hover {
+                background: #f4f7fb;
+            }
+            .route-client-toggle-hidden,
+            .route-client-panel-hidden {
+                display: none;
+            }
+            .route-client-panel {
+                width: 340px;
+                max-height: calc(100vh - 90px);
+                overflow: auto;
+                background: #ffffff;
+                border: 1px solid rgba(35, 35, 35, 0.35);
+                border-radius: 6px;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+                padding: 10px;
+                font-family: Arial, sans-serif;
+                color: #222;
+            }
+            .route-client-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .route-client-header h4 {
+                margin: 0;
+                font-size: 15px;
+            }
+            .route-client-close {
+                width: 26px;
+                height: 26px;
+                border: 0;
+                border-radius: 4px;
+                background: #f1f3f4;
+                color: #333;
+                cursor: pointer;
+                font-size: 18px;
+                line-height: 1;
+                font-weight: 700;
+            }
+            .route-client-close:hover {
+                background: #e4e7eb;
+            }
+            .route-client-summary {
+                margin: 0 0 8px;
+                font-size: 12px;
+                color: #555;
+                text-align: center;
+            }
+            .route-client-card {
+                display: grid;
+                grid-template-columns: 30px minmax(0, 1fr) auto;
+                gap: 8px;
+                align-items: center;
+                padding: 7px 6px;
+                border-top: 1px solid #ececec;
+                cursor: pointer;
+            }
+            .route-client-card:hover, .route-client-card:focus {
+                background: #f4f7fb;
+                outline: none;
+            }
+            .route-client-number {
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                border: 2px solid #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+            }
+            .route-client-name {
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }
+            .route-client-meta {
+                font-size: 11px;
+                color: #666;
+                margin-top: 2px;
+            }
+            .route-client-nav {
+                display: inline-block;
+                padding: 5px 7px;
+                border-radius: 4px;
+                background: #1a73e8;
+                color: #fff !important;
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            @media (max-width: 700px) {
+                .route-client-panel {
+                    width: calc(100vw - 36px);
+                    max-height: 42vh;
+                }
+            }
+        '''
+        route_map.add_child(SingleRouteCustomerPanel(panel_html, panel_data, panel_css))
     
     def create_single_route_map(self, route: Route, route_number: int,
                                 depot_location: Tuple[float, float]) -> folium.Map:
@@ -1403,6 +1920,7 @@ class InteractiveMapGenerator:
 
         bus_layer = folium.FeatureGroup(
             name=f"\U0001f68c Автобус {route_number} ({len(route.customers)} клиента)")
+        marker_entries = []
 
         # Маркери за клиентите
         for client_idx, customer in enumerate(route.customers):
@@ -1435,14 +1953,14 @@ class InteractiveMapGenerator:
                     <b>Ред в маршрута:</b> #{client_number}<br>
                     <b>Обем:</b> {customer.volume:.2f} ст.<br>
                     <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination={customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving"
+                    <a href="{self._navigation_url(customer.coordinates)}"
                        target="_blank"
                        style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
                         Навигация
                     </a>
                 </div>
                 """
-                folium.Marker(
+                marker = folium.Marker(
                     customer.coordinates,
                     popup=folium.Popup(popup_text, max_width=300),
                     tooltip=f"#{client_number}: {customer.name}",
@@ -1452,7 +1970,18 @@ class InteractiveMapGenerator:
                         icon_anchor=(15, 15),
                         popup_anchor=(0, -15)
                     )
-                ).add_to(bus_layer)
+                )
+                marker.add_to(bus_layer)
+                marker_entries.append({
+                    "marker_name": marker.get_name(),
+                    "number": client_number,
+                    "name": customer.name,
+                    "id": customer.id,
+                    "volume": customer.volume,
+                    "lat": customer.coordinates[0],
+                    "lng": customer.coordinates[1],
+                    "navigation_url": self._navigation_url(customer.coordinates),
+                })
 
         # Линия на маршрута
         if route.customers:
@@ -1491,6 +2020,7 @@ class InteractiveMapGenerator:
                 self._add_direction_arrows(polyline, bus_layer, bus_color)
 
         bus_layer.add_to(route_map)
+        self._add_single_route_customer_control(route_map, route, route_number, bus_color, marker_entries)
 
         # Легенда с информация за маршрута
         legend_html = f'''
