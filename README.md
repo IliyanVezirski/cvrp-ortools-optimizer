@@ -1,368 +1,368 @@
-﻿# CVRP Optimizer
+# CVRP OR-Tools Optimizer
+
+Софтуер за дневно планиране на маршрути на бусове с капацитет, работно време, различни депа, зона център, реални пътни разстояния и подробни изходни файлове.
+
+Проектът решава CVRP задача: дадени са клиенти с GPS координати и обем в стекове, налични бусове с различен капацитет и време за обслужване, и целта е да се получат изпълними маршрути с минимално време/разстояние и удобни файлове за диспечиране.
+
+## Какво може програмата
+
+- Чете входни данни от Excel или HTTP JSON.
+- Валидира GPS координати, обеми, клиентски номера и документи.
+- Разделя заявките между бусове и складова обработка.
+- Изчислява матрица с разстояния и времена през OSRM или Valhalla.
+- Поддържа два решителя: OR-Tools и PyVRP.
+- Поддържа индивидуално време за обслужване по тип бус.
+- Поддържа различни начални депа по тип бус.
+- Поддържа център зона като кръг или начертан полигон през GUI.
+- Позволява при нужда solver-ът да пропуска заявки, като приоритетно по-лесни за пропускане са големи и близки до депото заявки.
+- Генерира обща HTML карта, отделни HTML карти за всеки маршрут, Excel отчет, CSV файл и графики.
+- В отделните route карти има сгъваем списък с клиенти: бутон `Клиенти`, избор на клиент, popup с обем и бутон за навигация.
+- Показва посока на движение по маршрутите с разредени стрелки.
+- Добавя дата на стартиране към имената на общата карта, Excel файловете и отделните route карти. CSV файлът остава без дата.
+- Има GUI за настройки и Windows Task Scheduler интеграция.
+- Може да работи като Python проект или да се build-не до `CVRP_Optimizer.exe`.
 
-A complete vehicle routing solution for capacitated delivery planning, built for real operational use.
+## Основни файлове
 
-The project solves CVRP (Capacitated Vehicle Routing Problem) with two optimization engines, supports multiple routing backends, applies business-specific constraints, and produces rich outputs for dispatching and analysis.
+| Файл | Роля |
+|---|---|
+| `main.py` | Главен workflow за Python режим. |
+| `main_exe.py` | Entry point за PyInstaller/EXE режим. |
+| `config.py` | Основна конфигурация: вход, бусове, депа, solver, output, routing. |
+| `config_gui.py` | Графичен интерфейс за настройките. |
+| `input_handler.py` | Четене на Excel/HTTP JSON и парсване на GPS координати. |
+| `warehouse_manager.py` | Предварително разпределение към бусове или склад. |
+| `cvrp_solver.py` | OR-Tools solver. |
+| `pyvrp_solver.py` | PyVRP solver. |
+| `osrm_client.py` | OSRM матрици, кеш и route geometry. |
+| `valhalla_client.py` | Valhalla интеграция. |
+| `output_handler.py` | HTML карти, Excel, CSV и графики. |
+| `build_exe.py` | Автоматизиран build с PyInstaller. |
+| `start_cvrp.bat` | Стартира EXE, ако има; иначе стартира през `.venv`. |
+| `Settings.bat` | Отваря настройките през EXE или `.venv`. |
 
----
+## Бърз старт с Python
 
-## Table of Contents
+PowerShell:
 
-- Overview
-- Core Capabilities
-- System Architecture
-- Optimization Workflow
-- Input Handling
-- Fleet and Business Constraints
-- Solver Layer
-- Routing Engine Layer
-- Output and Reporting
-- Settings GUI
-- Scheduler Integration
-- Configuration Reference
-- EXE Runtime Behavior
-- Build and Distribution
-- Repository Structure
-- Quick Start
-- Troubleshooting
+```powershell
+cd "C:\Programming\Bizant 2.0\cvrp-ortools-optimizer"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
 
----
+Проверка, че OR-Tools е инсталиран в правилната среда:
 
-## Overview
+```powershell
+.\.venv\Scripts\python.exe -c "import ortools; print(ortools.__version__)"
+```
 
-CVRP Optimizer is designed to:
+Стартиране на оптимизатора:
 
-- Load customer demand from Excel or HTTP JSON feeds.
-- Validate and normalize coordinates and volumes.
-- Allocate customers between vehicles and warehouse according to policy limits.
-- Build optimized routes with OR-Tools or PyVRP.
-- Apply custom business rules (center-zone priorities, penalties, capacity and route limits, optional customer dropping).
-- Export operational outputs for dispatching teams.
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
 
-The system is suitable for daily route planning where constraints change often and non-technical users must be able to tune behavior from a GUI.
+Стартиране с конкретен Excel файл:
 
----
+```powershell
+.\.venv\Scripts\python.exe main.py "input\input.xlsx"
+```
 
-## Core Capabilities
+Стартиране през batch:
 
-- Dual solver support:
-  - OR-Tools
-  - PyVRP
-- Dual routing integration:
-  - OSRM
-  - Valhalla
-- Warehouse pre-allocation logic for oversized/filtered customers.
-- Center-zone cost shaping and traffic-aware behavior.
-- Optional parallel OR-Tools strategy competition.
-- Interactive map output:
-  - full map
-  - per-route maps
-- Excel reporting and CSV route export.
-- Charts for efficiency and route comparisons.
-- Desktop settings editor with save/run workflow.
-- Windows Scheduled Task management from GUI.
+```powershell
+.\start_cvrp.bat
+```
 
----
+## GUI настройки
 
-## System Architecture
+```powershell
+.\Settings.bat
+```
 
-Main orchestration is in `main.py`.
+или:
 
-High-level flow:
+```powershell
+.\.venv\Scripts\python.exe config_gui.py
+```
 
-1. Load configuration from `config.py`.
-2. Load and normalize input data in `input_handler.py`.
-3. Split and optimize warehouse allocation in `warehouse_manager.py`.
-4. Solve CVRP in `cvrp_solver.py` or `pyvrp_solver.py`.
-5. Generate outputs in `output_handler.py`.
+GUI-то има табове за:
 
-Runtime entry points:
+- Входни данни.
+- Превозни средства.
+- Предварителна оптимизация/склад.
+- Solver настройки.
+- Локации и депа.
+- Изходни файлове.
+- Автоматично стартиране през Windows Task Scheduler.
 
-- Python mode: `main.py`
-- EXE mode: `main_exe.py`
-- Configuration UI: `config_gui.py`
+В таб `Локации` могат да се добавят допълнителни депа във формат:
 
----
+```text
+Име на депо: 42.123456, 23.123456
+```
 
-## Optimization Workflow
+След запис/презареждане тези депа могат да се избират по име за начално депо на видовете бусове.
 
-1. Read customers and depot/location settings.
-2. Validate demand and coordinates.
-3. Apply pre-solver business filtering (warehouse/customer constraints).
-4. Build solver model and dimensions/constraints.
-5. Solve using selected engine and search strategy.
-6. Post-process routes (metrics, geometry, summaries).
-7. Export map, tabular outputs, and diagnostics.
+## Входни данни
 
----
+Настройките са в `config.py`, клас `InputConfig`.
 
-## Input Handling
+Поддържани режими:
 
-Input is controlled by `input.input_source` in `config.py`.
+- `input_source = "excel"`
+- `input_source = "http_json"`
 
-Supported modes:
+По подразбиране Excel файлът е:
 
-- `excel`
-  - Uses `input.excel_file_path`.
-- `http_json`
-  - Uses `input.json_url` and mapping fields.
+```text
+input/input.xlsx
+```
 
-HTTP JSON mode features:
+Основни колони:
 
-- Field mapping for client id, name, volume, GPS, and document number.
-- Optional date override.
-- Business-day date logic when override is empty.
-- Robust parsing for mixed payload quality and encoding variations.
+| Поле | Примерна колона |
+|---|---|
+| Клиентски номер | `IdCust` |
+| Име на клиент | `Клиент` |
+| GPS | `GPS` |
+| Обем | `Брой стекове` |
+| Документ | `Документ` |
 
----
+GPS стойностите се очакват като latitude/longitude, например:
 
-## Fleet and Business Constraints
+```text
+42.697357, 23.323810
+```
 
-Vehicle model supports:
+HTTP JSON режимът поддържа URL с дата, декодиране на `utf-8`, `windows-1251`, `latin-1` и mapping на полетата в `InputConfig`.
 
-- Per-type enable/disable.
-- Vehicle count per type.
-- Capacity per vehicle.
-- Time and customer limits per route.
-- Service time per stop.
-- Optional custom start/depot behavior.
+## Бусове, депа и сервизно време
 
-Business rules include:
+Всеки `VehicleConfig` има:
 
-- Center-zone prioritization and penalties.
-- Optional city traffic adjustment.
-- Warehouse thresholds and tolerance logic.
-- Optional customer skipping with configured disjunction penalty.
+- `vehicle_type`
+- `enabled`
+- `count`
+- `capacity`
+- `max_time_hours`
+- `service_time_minutes`
+- `max_customers_per_route`
+- `start_location`
+- `tsp_depot_location`
+- `start_time_minutes`
 
----
+Важна текуща логика:
 
-## Solver Layer
+- OR-Tools използва vehicle-specific transit callbacks за време.
+- PyVRP използва отделни профили по тип бус и добавя service time в edge duration.
+- Времето за обслужване вече не е средна стойност за всички бусове.
+- При избор на депо през GUI се записва както `start_location`, така и `tsp_depot_location`.
 
-### OR-Tools (`cvrp_solver.py`)
+## Център зона
 
-- Classical routing model.
-- Supports first-solution and local-search strategy tuning.
-- Optional parallel solving setup with configurable worker strategy lists.
-- Strong support for custom dimensions and penalties.
+Център зоната може да работи в два режима:
 
-Key config keys:
+```python
+center_zone_mode = "circle"
+center_zone_mode = "polygon"
+```
 
-- `cvrp.solver_type = "or_tools"`
-- `cvrp.first_solution_strategy`
-- `cvrp.local_search_metaheuristic`
-- `cvrp.enable_parallel_solving`
-- `cvrp.num_workers`
-- `cvrp.parallel_first_solution_strategies`
-- `cvrp.parallel_local_search_metaheuristics`
+При `circle` се използват:
 
-### PyVRP (`pyvrp_solver.py`)
+- `center_location`
+- `center_zone_radius_km`
 
-- Alternative ILS-style VRP solving.
-- Suitable for route-quality-focused scenarios.
-- Mapped into the same output contract as OR-Tools.
+При `polygon` се използва:
 
-Key config key:
+- `center_zone_polygon`
 
-- `cvrp.solver_type = "pyvrp"`
+GUI бутонът `Чертай на карта` отваря локален Leaflet редактор, в който зоната може да се начертае и запише като полигон.
 
----
+Зоната влияе върху:
 
-## Routing Engine Layer
+- приоритети на center bus;
+- ограничения и penalties за други бусове;
+- визуализацията върху картите.
 
-### OSRM
+## Solver-и
 
-- Fast matrix and route geometry generation.
-- Good default for static routing workflows.
+### OR-Tools
 
-### Valhalla
+Избира се с:
 
-- Rich cost behavior and profile support.
-- Useful where travel-time realism and profile control are needed.
+```python
+cvrp.solver_type = "or_tools"
+```
 
-Routing selection is configured in `config.routing` and corresponding engine sections.
+OR-Tools режимът поддържа:
 
----
+- capacity dimension;
+- time dimension с vehicle-specific service time;
+- индивидуални депа;
+- пропускане на клиенти чрез `AddDisjunction`;
+- индивидуални penalties при priority dropping;
+- паралелни стратегии, ако `enable_parallel_solving = True`.
 
-## Output and Reporting
+### PyVRP
 
-Generated artifacts are controlled from `output.*` settings.
+Избира се с:
 
-Primary outputs:
+```python
+cvrp.solver_type = "pyvrp"
+```
 
-- Interactive full-route HTML map.
-- Per-route HTML maps in a dedicated routes directory.
-- Excel report(s) for route and warehouse summaries.
-- CSV export for route rows and dispatching pipelines.
-- Optional chart image set.
+В `requirements.txt` PyVRP е pin-нат към:
 
-Path behavior:
+```text
+pyvrp>=0.5.0,<0.6.0
+```
 
-- Absolute paths are respected.
-- Relative paths are resolved from runtime base directory.
-- If a directory is provided where a file path is expected (map/csv), default filename is auto-applied.
+PyVRP използва същата входна матрица, същите клиенти и същата output структура. Поддържа vehicle-specific service time и priority dropping чрез prize/penalty логика.
 
----
+Забележка: нито OR-Tools, нито PyVRP в този проект използват видеокарта. По-добрият резултат идва от настройки, време за търсене, матрица с по-точни времена и коректни ограничения, не от GPU.
 
-## Settings GUI
+## Приоритетно пропускане на заявки
 
-`config_gui.py` provides a tabbed editor for all major configuration blocks.
+Когато `allow_customer_skipping = True`, solver-ът може да остави част от заявките необслужени, ако всички ограничения не могат да се изпълнят.
 
-Tabs:
+Когато `enable_priority_dropping = True`, penalty/prize се изчислява индивидуално:
 
-- Input
-- Vehicles
-- Warehouse
-- Solver
-- Locations
-- Output
-- Scheduler
+- по-голям обем означава по-лесно пропускане;
+- по-близо до депо означава по-лесно пропускане;
+- малки и далечни заявки получават по-висока защита.
 
-Actions:
+Основни настройки:
 
-- Save
-- Save and close
-- Save and run
+```python
+enable_priority_dropping = True
+drop_volume_weight = 0.70
+drop_closeness_weight = 0.30
+min_customer_drop_penalty = 20000
+max_customer_drop_penalty = 120000
+```
 
-Solver tab includes advanced OR-Tools controls, including parallel strategy lists.
+Това не е строго двуфазно правило "само ако няма решение"; това е objective bias. Ако solver-ът пропуска твърде лесно, увеличи `min_customer_drop_penalty` и `max_customer_drop_penalty`.
 
----
+## Routing engine
 
-## Scheduler Integration
+Изборът е в `config.routing.engine`:
 
-The GUI supports Windows Scheduled Task operations:
-
-- Create task
-- Remove task
-- Check task status
-
-The scheduled command is generated to run the optimizer from deployment folder context.
-
----
-
-## Configuration Reference
-
-Main config groups in `config.py`:
-
-- `input`
-- `vehicles`
-- `warehouse`
-- `cvrp`
-- `locations`
-- `output`
-- `routing`
 - `osrm`
 - `valhalla`
-- `logging`
-- `cache`
-- `performance`
 
-Recommended first settings to verify:
+OSRM е основният режим. Използва:
 
-- `input.input_source`
-- `cvrp.solver_type`
-- `output.map_output_file`
-- `output.routes_output_dir`
-- `output.excel_output_dir`
-- `output.csv_output_file`
+- централен кеш;
+- batch Table API;
+- route geometry за визуализация;
+- fallback логика при липсващи данни.
 
----
+Важно: междублоковите връзки вече не се приемат за симетрични. A->B и B->A се попълват отделно, защото еднопосочни улици, забрани и завои могат да правят двете посоки различни.
 
-## EXE Runtime Behavior
+## Изходни файлове
 
-`main_exe.py` handles deployment runtime details:
+Основни output директории:
 
-- Uses EXE directory as runtime base.
-- Loads `config.py` from the EXE folder.
-- Creates required runtime directories.
-- Supports `--settings` mode to open configuration UI.
-
-Batch helpers produced by build process:
-
-- `Settings.bat`
-- `start_cvrp.bat`
-
----
-
-## Build and Distribution
-
-Use `build_exe.py` to package the application.
-
-Build script responsibilities:
-
-- Generate spec/version metadata.
-- Resolve native dependencies.
-- Build EXE via PyInstaller.
-- Create runtime helper batch files.
-- Copy runtime config where required.
-
----
-
-## Repository Structure
-
-- `main.py` - Core orchestrator
-- `main_exe.py` - EXE bootstrap/runtime logic
-- `config.py` - Central dataclass configuration
-- `config_gui.py` - Desktop settings editor
-- `input_handler.py` - Input loading and normalization
-- `warehouse_manager.py` - Warehouse allocation logic
-- `cvrp_solver.py` - OR-Tools solver implementation
-- `pyvrp_solver.py` - PyVRP solver implementation
-- `output_handler.py` - Map/report/chart exporters
-- `osrm_client.py` - OSRM integration
-- `valhalla_client.py` - Valhalla integration
-- `build_exe.py` - Build and packaging pipeline
-
----
-
-## Quick Start
-
-### Python mode
-
-```bash
-python -m venv .venv
-.venv\\Scripts\\activate
-pip install -r requirements.txt
-python main.py
+```text
+output/
+output/routes/
+output/excel/
+output/charts/
+logs/
 ```
 
-### Settings UI
+Генерирани файлове:
 
-```bash
-python config_gui.py
+- обща HTML карта;
+- отделна HTML карта за всеки маршрут;
+- Excel отчет `cvrp_report_YYYY-MM-DD.xlsx`;
+- Excel файлове за склад и маршрути, ако са активни;
+- CSV `routes.csv`;
+- PNG графики;
+- log файл.
+
+Дата се добавя към:
+
+- общата карта;
+- отделните route карти;
+- Excel файловете.
+
+CSV файлът не се променя по име, за да остане стабилен за външни процеси.
+
+## Карти
+
+Поддържат се два режима:
+
+- Folium/OpenStreetMap/Esri tiles (`map_provider = "osm"`);
+- Google Maps (`map_provider = "google"`, изисква API key).
+
+В картите има:
+
+- депа;
+- център зона като кръг или полигон;
+- цветни маршрути;
+- разредени стрелки за посока на движение;
+- popup-и с информация за клиенти;
+- Google Maps navigation link.
+
+В отделните route карти има сгъваем списък:
+
+- бутон `Клиенти`;
+- списък с ред на посещение;
+- обем в стекове;
+- бутон `Навигация`;
+- клик върху клиент центрира картата и отваря popup.
+
+## Build до EXE
+
+Подробно е описано в [BUILD_EXE_README.md](BUILD_EXE_README.md).
+
+Кратко:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install pyinstaller
+.\.venv\Scripts\python.exe build_exe.py
 ```
 
-### Build EXE
+Build-ът създава `CVRP_Optimizer.exe` в `..\dist`.
 
-```bash
-python build_exe.py
+## Чести проблеми
+
+### "OR-Tools не е инсталиран"
+
+Провери, че стартираш правилния Python:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import ortools; print(ortools.__version__)"
 ```
 
----
+Ако това работи, но програмата казва, че OR-Tools липсва, стартираш с друг Python или стар стартиращ файл. Използвай:
 
-## Troubleshooting
+```powershell
+.\start_cvrp.bat
+```
 
-### No output files generated
+### Няма `CVRP_Optimizer.exe`
 
-- Verify output paths in Settings.
-- Ensure directories are writable.
-- Check `logs/` for stack traces.
+`start_cvrp.bat` и `Settings.bat` вече имат fallback към `.venv`. Можеш да работиш без EXE.
 
-### EXE cannot find configuration
+### Няма route карти или Excel
 
-- Confirm `config.py` is in same folder as `CVRP_Optimizer.exe`.
+Провери:
 
-### Scheduler task exists but does not execute as expected
+- `output.enable_interactive_map`;
+- output директориите;
+- правата за запис;
+- `logs/cvrp.log`.
 
-- Verify user permissions and task run context.
-- Confirm `start_cvrp.bat` and `CVRP_Optimizer.exe` are in deployment folder.
+### Няма видима посока на картата
 
-### Input not loading
+Генерирай картите наново. Старите HTML файлове не се обновяват автоматично.
 
-- For Excel mode, verify file path and sheet/column mapping.
-- For HTTP JSON mode, verify URL and field mapping.
+### Списъкът с клиенти не се вижда в отделните карти
 
----
-
-## License
-
-MIT (or project-specific license, if changed in this repository).
+Генерирай route картите наново. Новият списък е зад бутон `Клиенти`, за да не закрива картата.

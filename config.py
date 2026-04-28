@@ -90,7 +90,7 @@ class LocationConfig:
     # Параметри за градски трафик (задръствания в София)
     city_center_coords: Tuple[float, float] = (42.6977, 23.3219)  # Център на София (площад Независимост)
     city_traffic_radius_km: float = 10.0  # Радиус на градската зона с трафик (км)
-    city_traffic_duration_multiplier: float = 1.4 # Множител за време в града (1.35 = +35% заради трафик)
+    city_traffic_duration_multiplier: float = 1.55 # Множител за време в града (1.35 = +35% заради трафик)
     enable_city_traffic_adjustment: bool = True  # Дали да се прилага корекция за градски трафик
 
 
@@ -283,7 +283,7 @@ class OSRMConfig:
 @dataclass
 class InputConfig:
     """Конфигурации за обработка на входните данни от Excel файл или HTTP JSON."""
-    input_source: str = "excel"  # Източник на данни: "excel" или "http_json"
+    input_source: str = "http_json"  # Източник на данни: "excel" или "http_json"
     excel_file_path: str = _abs_path("C:\\Programming\\Bizant 2.0\\cvrp-ortools-optimizer\\input/input.xlsx") # Път до входния Excel файл.
     json_url: str = "http://sio.effect.bg:7080/lubiv_Bizant"  # URL за HTTP JSON източник (използва се когато input_source="excel")
     json_gps_field: str = "GPS"          # Име на JSON полето с GPS координати.
@@ -329,7 +329,7 @@ class CVRPConfig:
     # Описание: Стратегия за намиране на първоначално решение. SAVINGS е по-бърза от AUTOMATIC.
     # Стойности: "AUTOMATIC", "PATH_CHEAPEST_ARC", "SAVINGS", "SWEEP", и др.
 
-    local_search_metaheuristic: str = "GUIDED_LOCAL_SEARCH"
+    local_search_metaheuristic: str = "AUTOMATIC"
     # Описание: SIMULATED_ANNEALING е по-добра за избягване на локални оптимуми.
     # Стойности: "AUTOMATIC", "GUIDED_LOCAL_SEARCH", "SIMULATED_ANNEALING", "TABU_SEARCH".
     
@@ -364,8 +364,8 @@ class CVRPConfig:
     # --- Настройки за паралелна обработка ---
     enable_priority_dropping: bool = True
     # True = large close-to-depot customers get lower skip penalty/prize.
-    drop_volume_weight: float = 0.70
-    drop_closeness_weight: float = 0.30
+    drop_volume_weight: float = 0.7
+    drop_closeness_weight: float = 0.3
     min_customer_drop_penalty: int = 45000
     max_customer_drop_penalty: int = 150000
 
@@ -532,12 +532,12 @@ class MainConfig:
                 count=6,
                 max_distance_km=None, # Премахнато
                 max_time_hours=8,
-                service_time_minutes=7,
+                service_time_minutes=9,
                 enabled=True,
                 max_customers_per_route=None,
-                start_location=depot_main,  # Тръгва от центъра
+                start_location=(42.69735652560932, 23.323809998750914),  # Тръгва от центъра
                 start_time_minutes=480,  # 8:00
-                tsp_depot_location=depot_main  # TSP оптимизация от главното депо
+                tsp_depot_location=(42.69735652560932, 23.323809998750914)  # TSP оптимизация от главното депо
             ),
             # 2. Център бус - 1 бр.
             VehicleConfig(
@@ -546,12 +546,12 @@ class MainConfig:
                 count=1,
                 max_distance_km=None, # Премахнато
                 max_time_hours=8,
-                service_time_minutes=9,
+                service_time_minutes=8,
                 enabled=True,
                 max_customers_per_route=None,
-                start_location=depot_main,  # Тръгва от център депото
+                start_location=(42.695785029219415, 23.23165887245312),  # Тръгва от център депото
                 start_time_minutes=510,  # 8:30
-                tsp_depot_location=depot_main  # TSP оптимизация от център депото
+                tsp_depot_location=(42.695785029219415, 23.23165887245312)  # TSP оптимизация от център депото
             ),
             # 3. Външни бусове - 3 бр, 360 ст.
             VehicleConfig(
@@ -560,12 +560,12 @@ class MainConfig:
                 count=1,
                 max_distance_km=None, # Премахнато
                 max_time_hours=8,   
-                service_time_minutes=7, # КОРИГИРАНО
+                service_time_minutes=9, # КОРИГИРАНО
                 enabled=True,
                 max_customers_per_route=None,
-                start_location=depot_main,  # Тръгва от главното депо
+                start_location=(42.695785029219415, 23.23165887245312),  # Тръгва от главното депо
                 start_time_minutes=450,  # 7:30
-                tsp_depot_location=depot_main  # TSP оптимизация от главното депо
+                tsp_depot_location=(42.695785029219415, 23.23165887245312)  # TSP оптимизация от главното депо
             ),
             # 4. Специални бусове - 
             VehicleConfig(
@@ -577,9 +577,9 @@ class MainConfig:
                 service_time_minutes=6,
                 enabled=False,  # Изключени по подразбиране
                 max_customers_per_route=None,
-                start_location=depot_center,  # Тръгва от главното депо
+                start_location=(42.695785029219415, 23.23165887245312),  # Тръгва от главното депо
                 start_time_minutes=480,  # 8:00
-                tsp_depot_location=depot_main  # TSP оптимизация от главното депо
+                tsp_depot_location=(42.695785029219415, 23.23165887245312)  # TSP оптимизация от главното депо
             ),
             # 5. Враца бусове
             VehicleConfig(
@@ -591,9 +591,9 @@ class MainConfig:
                 service_time_minutes=7,
                 enabled=False,  # ТЕСТ: Временно активиран
                 max_customers_per_route=40,
-                start_location=depot_vratza,  # Тръгва от депото във Враца
+                start_location=(43.221042895146915, 23.5344026186417),  # Тръгва от депото във Враца
                 start_time_minutes=480,  # 8:00
-                tsp_depot_location=depot_vratza  # TSP оптимизация от Враца депо
+                tsp_depot_location=(43.221042895146915, 23.5344026186417)  # TSP оптимизация от Враца депо
             )
         ]
 

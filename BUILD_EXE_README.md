@@ -1,128 +1,230 @@
-# 🚀 Как да създадете EXE файл за OptiRoute
+# Build инструкции за CVRP_Optimizer.exe
 
-## Метод 1: Автоматично създаване (Препоръчан)
+Този документ описва как се създава Windows EXE версията на проекта.
 
-### Стъпка 1: Инсталиране на PyInstaller
-```bash
-pip install pyinstaller
+## Какво build-ваме
+
+Build процесът използва `build_exe.py` и PyInstaller, за да създаде:
+
+```text
+..\dist\CVRP_Optimizer.exe
+..\dist\start_cvrp.bat
+..\dist\Settings.bat
+..\dist\config.py
 ```
 
-### Стъпка 2: Създаване на EXE файл
-```bash
-pyinstaller --onefile --console --name OptiRoute main.py
+EXE entry point-ът е `main_exe.py`, не директно `main.py`.
+
+## Препоръчителен build workflow
+
+Отвори PowerShell в папката на проекта:
+
+```powershell
+cd "C:\Programming\Bizant 2.0\cvrp-ortools-optimizer"
 ```
 
-### Стъпка 3: Намиране на EXE файла
-EXE файлът ще се създаде в папката `dist/` с име `OptiRoute.exe`
+Създай/обнови виртуалната среда:
 
-## Метод 2: Използване на batch файл
-
-### Стъпка 1: Стартиране на batch файла
-```bash
-.\build_exe_simple.bat
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install pyinstaller
 ```
 
-### Стъпка 2: Изчакване на създаването
-Процесът може да отнеме 2-5 минути.
+Провери критичните зависимости:
 
-## Метод 3: Подробна конфигурация
-
-### Стъпка 1: Създаване с spec файл
-```bash
-pyinstaller optiroute_simple.spec
+```powershell
+.\.venv\Scripts\python.exe -c "import ortools; print('ortools', ortools.__version__)"
+.\.venv\Scripts\python.exe -c "import pyvrp; print('pyvrp ok')"
+.\.venv\Scripts\python.exe -c "import main, main_exe, config_gui; print('imports ok')"
 ```
 
-### Стъпка 2: Проверка на резултата
-```bash
-dir dist\OptiRoute.exe
+Стартирай build-а:
+
+```powershell
+.\.venv\Scripts\python.exe build_exe.py
 ```
 
-## ⚠️ Важни забележки
+## Какво прави `build_exe.py`
 
-### 1. Размер на EXE файла
-- EXE файлът ще бъде голям (50-100 MB)
-- Това е нормално, защото включва Python интерпретатора
+1. Проверява зависимости.
+2. Инсталира липсващи зависимости, ако е нужно.
+3. Открива пътищата до OR-Tools и PyVRP.
+4. Генерира `CVRP_Optimizer.spec`.
+5. Генерира `file_version_info.txt`.
+6. Стартира PyInstaller със spec файла.
+7. При неуспех пробва fallback build с директни PyInstaller опции.
+8. Създава `start_cvrp.bat` и `Settings.bat`.
+9. Копира `config.py` в `dist`.
 
-### 2. Необходими файлове
-Преди да стартирате EXE файла, се уверете че имате:
-- `data/input.xlsx` - входни данни
-- `config.py` - конфигурация (ако е нужно)
+## Очаквана структура след build
 
-### 3. Първо стартиране
-При първото стартиране EXE файлът може да:
-- Отнеме повече време за зареждане
-- Създаде необходимите папки автоматично
-
-## 🛠️ Решаване на проблеми
-
-### Проблем: "ModuleNotFoundError"
-**Решение**: Добавете липсващия модул в spec файла:
-```python
-hiddenimports=['липсващ_модул']
+```text
+Bizant 2.0/
+  cvrp-ortools-optimizer/
+    build_exe.py
+    CVRP_Optimizer.spec
+    config.py
+    ...
+  dist/
+    CVRP_Optimizer.exe
+    config.py
+    start_cvrp.bat
+    Settings.bat
+    data/
+      input.xlsx
 ```
 
-### Проблем: "FileNotFoundError"
-**Решение**: Уверете се че всички необходими файлове са в правилните папки.
+Забележка: `build_exe.py` използва `..\dist`, тоест `dist` е една папка над project folder-а.
 
-### Проблем: Голям размер на EXE
-**Решение**: Използвайте `--onedir` вместо `--onefile`:
-```bash
-pyinstaller --onedir --console --name OptiRoute main.py
+## Стартиране след build
+
+Постави входния файл тук:
+
+```text
+..\dist\data\input.xlsx
 ```
 
-## 📁 Структура след създаване
+Стартиране:
 
-```
-OptiRoute_Final/
-├── dist/
-│   └── OptiRoute.exe          # Вашият EXE файл
-├── build/                      # Временни файлове
-├── main.py                     # Основен файл
-├── config.py                   # Конфигурация
-└── data/
-    └── input.xlsx              # Входни данни
+```powershell
+cd "C:\Programming\Bizant 2.0\dist"
+.\start_cvrp.bat
 ```
 
-## 🚀 Стартиране на EXE файла
+Настройки:
 
-### От командния ред:
-```bash
-dist\OptiRoute.exe
+```powershell
+.\Settings.bat
 ```
 
-### От Windows Explorer:
-Двойно кликване върху `OptiRoute.exe` в папката `dist/`
+## Работа без EXE
 
-## 📋 Проверка на функционалността
+В development папката `start_cvrp.bat` и `Settings.bat` имат fallback:
 
-След създаването на EXE файла, тествайте:
+- ако има `CVRP_Optimizer.exe`, стартират EXE;
+- ако няма EXE, стартират през `.venv\Scripts\python.exe`.
 
-1. **Стартиране**: `dist\OptiRoute.exe`
-2. **Обработка на данни**: Поставете `input.xlsx` в папката `data/`
-3. **Генериране на резултати**: Проверете папката `output/`
+Това позволява да работиш веднага с Python режим, без build.
 
-## 🔧 Допълнителни опции
+## Чести build грешки
 
-### Създаване на EXE без конзола:
-```bash
-pyinstaller --onefile --windowed --name OptiRoute main.py
+### OR-Tools не е инсталиран
+
+Провери:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip show ortools
+.\.venv\Scripts\python.exe -c "from ortools.constraint_solver import pywrapcp; print('ok')"
 ```
 
-### Създаване с икона:
-```bash
-pyinstaller --onefile --console --icon=icon.ico --name OptiRoute main.py
+Ако командите работят, но build-ът пада, вероятно PyInstaller не намира hidden imports. Увери се, че build-ът се пуска със същия Python:
+
+```powershell
+.\.venv\Scripts\python.exe build_exe.py
 ```
 
-### Оптимизация за размер:
-```bash
-pyinstaller --onefile --console --strip --name OptiRoute main.py
+Не използвай глобален `python build_exe.py`, ако пакетите са инсталирани във `.venv`.
+
+### PyInstaller липсва
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install pyinstaller
 ```
 
-## ✅ Успешно създаване
+### `CVRP_Optimizer.exe` не се появява
 
-Когато EXE файлът е създаден успешно, ще видите:
-- ✅ EXE файл в папката `dist/`
-- ✅ Размер около 50-100 MB
-- ✅ Възможност за стартиране от командния ред
+Провери:
 
-**Готово! Вашата програма сега може да се стартира като EXE файл! 🎉** 
+- има ли грешка в конзолата;
+- има ли `..\build` и `..\dist`;
+- дали antivirus не блокира EXE файла;
+- дали командата е пусната от project folder-а;
+- дали `main_exe.py`, `config.py`, `output_handler.py` се импортват успешно.
+
+### Грешка от PyVRP
+
+В `requirements.txt` PyVRP е pin-нат към:
+
+```text
+pyvrp>=0.5.0,<0.6.0
+```
+
+Ако се инсталира по-нова несъвместима версия, върни правилната:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install "pyvrp>=0.5.0,<0.6.0"
+```
+
+### Грешка от pandas/numpy/protobuf
+
+Пусни:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip check
+```
+
+Ако има конфликт, най-чистият вариант е нова виртуална среда:
+
+```powershell
+Remove-Item -Recurse -Force .venv
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install pyinstaller
+```
+
+Използвай тази команда за изтриване само ако си сигурен, че `.venv` е локалната среда на проекта.
+
+## Какво трябва да има в build-а
+
+PyInstaller spec-ът включва hidden imports за:
+
+- `ortools`
+- `ortools.constraint_solver`
+- `ortools.constraint_solver.pywrapcp`
+- `ortools.constraint_solver.routing_enums_pb2`
+- `pyvrp`
+- `pandas`
+- `numpy`
+- `openpyxl`
+- `folium`
+- `requests`
+- `matplotlib`
+- `tkinter`
+
+Ако при build се появи `ModuleNotFoundError`, липсващият модул трябва да се добави в hidden imports в `build_exe.py`/`CVRP_Optimizer.spec`.
+
+## Runtime файлове
+
+В папката до EXE трябва да има:
+
+- `CVRP_Optimizer.exe`
+- `config.py`
+- `start_cvrp.bat`
+- `Settings.bat`
+- `data/input.xlsx`, ако се работи с Excel файл;
+- директории `output/`, `logs/`, `cache/` се създават при нужда.
+
+## Проверка на готовия EXE
+
+От `dist`:
+
+```powershell
+.\CVRP_Optimizer.exe --settings
+```
+
+или:
+
+```powershell
+.\Settings.bat
+```
+
+После:
+
+```powershell
+.\start_cvrp.bat
+```
+
+Ако възникне проблем, първо провери `logs/cvrp.log`.

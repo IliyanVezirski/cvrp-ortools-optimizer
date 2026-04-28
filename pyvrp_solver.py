@@ -23,7 +23,13 @@ except ImportError:
     PYVRP_AVAILABLE = False
     logging.warning("PyVRP ne e instaliran. Shte se izpolzva OR-Tools.")
 
-from config import CVRPConfig, VehicleConfig, LocationConfig, calculate_customer_drop_penalties
+from config import (
+    CVRPConfig,
+    VehicleConfig,
+    LocationConfig,
+    calculate_customer_drop_penalties,
+    is_location_in_center_zone,
+)
 from input_handler import Customer
 from osrm_client import DistanceMatrix
 from warehouse_manager import WarehouseAllocation
@@ -147,8 +153,28 @@ class PyVRPSolver:
             logger.info(f"  - Depot {i}: ({lat}, {lon})")
 
         # 2. Определяме кои клиенти са в център зоната
+        center_priority_enabled = bool(
+            self.location_config
+            and self.location_config.enable_center_zone_priority
+        )
+        center_restrictions_enabled = bool(
+            self.location_config
+            and self.location_config.enable_center_zone_restrictions
+        )
         center_zone_customer_ids = {c.id for c in self.center_zone_customers} if self.center_zone_customers else set()
+        if self.location_config and (center_priority_enabled or center_restrictions_enabled):
+            center_zone_customer_ids.update({
+                customer.id
+                for customer in self.customers
+                if customer.coordinates
+                and is_location_in_center_zone(customer.coordinates, self.location_config)
+            })
         logger.info(f"Center zone customers: {len(center_zone_customer_ids)}")
+        logger.info(
+            "Center zone settings: priority=%s, restrictions=%s",
+            center_priority_enabled,
+            center_restrictions_enabled,
+        )
 
         # 3. Добавяме клиенти
         enabled_vehicles = [v for v in self.vehicle_configs if v.enabled]
@@ -203,10 +229,14 @@ class PyVRPSolver:
             logger.debug(f"  - Client {idx}: ID={customer.id}, volume={delivery}, center={is_in_center}, prize={client_prize}")
 
         # 4. Създаваме профил за всеки тип бус, за да има точен service time.
-        center_discount = self.location_config.discount_center_bus if self.location_config else 0.10
-        center_penalty = 50000  # Голяма глоба за не-CENTER бусове в центъра
+        center_discount = (
+            self.location_config.discount_center_bus
+            if self.location_config and center_priority_enabled
+            else 1.0
+        )
+        center_penalty = 50000
         
-        if self.location_config and self.location_config.enable_center_zone_restrictions:
+        if self.location_config and center_restrictions_enabled:
             # Вземаме максималната глоба от конфигурацията
             center_penalty = max(
                 self.location_config.external_bus_center_penalty,
@@ -276,7 +306,6 @@ class PyVRPSolver:
             locations_in_city.append(in_city)
         
         city_edges_count = 0
-        
         for i in range(num_locations):
             for j in range(num_locations):
                 if i == j:
@@ -312,12 +341,14 @@ class PyVRPSolver:
                         vehicle_duration += vehicle_service_times.get(v_key, 15 * 60)
 
                     if v_config.vehicle_type == ConfigVehicleType.CENTER_BUS:
-                        if is_dest_center_client:
+                        if is_dest_center_client and center_priority_enabled:
                             vehicle_distance = int(base_distance * center_discount)
-                        else:
+                        elif center_priority_enabled:
                             vehicle_distance = base_distance + int(center_penalty)
+                        else:
+                            vehicle_distance = base_distance
                     else:
-                        if is_dest_center_client:
+                        if is_dest_center_client and center_restrictions_enabled:
                             vehicle_distance = base_distance + int(center_penalty)
                         else:
                             vehicle_distance = base_distance
@@ -702,7 +733,7 @@ class PyVRPSolverWrapper:
     Wrapper за PyVRPSolver, съвместим с ORToolsSolver интерфейс.
     """
 
-    def __init__(self, config: CVRPConfig = None):
+    def __init__(self, config: CVRPConfig = None, location_config: LocationConfig = None):
         """
         Инициализира wrapper-а.
 
@@ -710,6 +741,7 @@ class PyVRPSolverWrapper:
             config: CVRPConfig (опционално)
         """
         self.config = config
+        self.location_config = location_config
 
     def solve(
         self,
@@ -736,6 +768,7 @@ class PyVRPSolverWrapper:
             self.config = full_config
 
         enabled_vehicles = full_config.vehicles or []
+        location_config = self.location_config or full_config.locations
 
         # Събираме всички депа
         unique_depots = {depot_location}
@@ -756,7 +789,7 @@ class PyVRPSolverWrapper:
             distance_matrix,
             sorted_depots,
             allocation.center_zone_customers,
-            full_config.locations
+            location_config
         )
 
         return solver.solve()
@@ -767,7 +800,8 @@ def solve_cvrp_pyvrp(
     allocation: WarehouseAllocation,
     depot_location: Tuple[float, float],
     distance_matrix: DistanceMatrix,
-    config: CVRPConfig = None
+    config: CVRPConfig = None,
+    location_config: LocationConfig = None,
 ) -> CVRPSolution:
     """
     Удобна функция за решаване на CVRP използвайки PyVRP.
@@ -781,5 +815,5 @@ def solve_cvrp_pyvrp(
     Returns:
         CVRPSolution
     """
-    solver = PyVRPSolverWrapper(config)
+    solver = PyVRPSolverWrapper(config, location_config)
     return solver.solve(allocation, depot_location, distance_matrix)

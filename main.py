@@ -227,10 +227,11 @@ def solve_cvrp_worker(worker_args: Tuple[WarehouseAllocation, Dict, Dict, Distan
             allocation=warehouse_allocation,
             depot_location=location_config.depot_location,
             distance_matrix=distance_matrix,
-            config=cvrp_config
+            config=cvrp_config,
+            location_config=location_config
         )
     else:  # or_tools
-        solver = CVRPSolver(cvrp_config)
+        solver = CVRPSolver(cvrp_config, location_config)
         solution = solver.solve(warehouse_allocation, location_config.depot_location, distance_matrix)
 
     if solution and solution.routes:

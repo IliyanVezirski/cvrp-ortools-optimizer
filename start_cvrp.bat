@@ -6,15 +6,36 @@ set "_MEIPASS2="
 echo CVRP Optimizer - Starting...
 echo.
 
-REM Проверяваме дали има входен файл
+if exist "%APP_DIR%CVRP_Optimizer.exe" (
+    set "APP_MODE=exe"
+    set "APP_CMD=%APP_DIR%CVRP_Optimizer.exe"
+) else if exist "%APP_DIR%.venv\Scripts\python.exe" (
+    set "APP_MODE=python"
+    set "APP_CMD=%APP_DIR%.venv\Scripts\python.exe"
+) else (
+    echo Python virtual environment not found.
+    echo Run: python -m venv .venv
+    echo Then: .venv\Scripts\python.exe -m pip install -r requirements.txt
+    pause
+    exit /b 1
+)
+
 if exist "%APP_DIR%data\input.xlsx" (
     echo Input file found: %APP_DIR%data\input.xlsx
-    "%APP_DIR%CVRP_Optimizer.exe" "%APP_DIR%data\input.xlsx"
+    if "%APP_MODE%"=="exe" (
+        "%APP_CMD%" "%APP_DIR%data\input.xlsx"
+    ) else (
+        "%APP_CMD%" "%APP_DIR%run_main.py" "%APP_DIR%data\input.xlsx"
+    )
 ) else (
     echo Input file not found in data\input.xlsx
     echo Place the input file in data\input.xlsx
     echo or in the current directory as input.xlsx
     echo.
     echo Starting with current configuration...
-    "%APP_DIR%CVRP_Optimizer.exe"
+    if "%APP_MODE%"=="exe" (
+        "%APP_CMD%"
+    ) else (
+        "%APP_CMD%" "%APP_DIR%run_main.py"
+    )
 )

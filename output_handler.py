@@ -216,6 +216,79 @@ class GoogleMapDocument:
             f.write(self.html_content)
 
 
+class StreetViewPicker(MacroElement):
+    """Leaflet control that opens Google Street View for a clicked map point."""
+
+    _template = Template(
+        """
+        {% macro script(this, kwargs) %}
+        (function() {
+            const map = {{ this._parent.get_name() }};
+            const css = {{ this.css|safe }};
+
+            if (!document.getElementById("street-view-picker-style")) {
+                const style = document.createElement("style");
+                style.id = "street-view-picker-style";
+                style.textContent = css;
+                document.head.appendChild(style);
+            }
+
+            const picker = L.control({ position: "topleft" });
+            picker.onAdd = function() {
+                const container = L.DomUtil.create("div", "street-view-picker-control");
+                container.innerHTML = `
+                    <button type="button" class="street-view-picker-button" title="Отвори Google Street View от избрана точка">
+                        <span class="street-view-picker-icon" aria-hidden="true"></span>
+                        <span>Street View</span>
+                    </button>
+                `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            };
+            picker.addTo(map);
+
+            function streetViewUrl(lat, lng) {
+                return "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="
+                    + lat.toFixed(6) + "," + lng.toFixed(6);
+            }
+
+            function setActive(button, isActive) {
+                button.classList.toggle("street-view-picker-active", isActive);
+                map.getContainer().style.cursor = isActive ? "crosshair" : "";
+            }
+
+            setTimeout(function() {
+                const button = document.querySelector(".street-view-picker-button");
+                if (!button) return;
+
+                button.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    const isActive = !button.classList.contains("street-view-picker-active");
+                    setActive(button, isActive);
+                });
+
+                map.on("click", function(clickEvent) {
+                    if (!button.classList.contains("street-view-picker-active")) return;
+                    setActive(button, false);
+                    window.open(
+                        streetViewUrl(clickEvent.latlng.lat, clickEvent.latlng.lng),
+                        "_blank",
+                        "noopener"
+                    );
+                });
+            }, 0);
+        })();
+        {% endmacro %}
+        """
+    )
+
+    def __init__(self, css: str):
+        super().__init__()
+        self._name = "StreetViewPicker"
+        self.css = json.dumps(css, ensure_ascii=False)
+
+
 class InteractiveMapGenerator:
     """Генератор на интерактивна карта"""
     
@@ -464,6 +537,8 @@ class InteractiveMapGenerator:
                 if not customer.coordinates:
                     continue
                 client_number = client_idx + 1
+                navigation_url = self._navigation_url(customer.coordinates)
+                street_view_url = self._street_view_url(customer.coordinates)
                 popup_html = self._html_popup(
                     f"Автобус {route_number} - {vehicle_settings['name']}",
                     [
@@ -473,12 +548,16 @@ class InteractiveMapGenerator:
                         f"<b>Обем:</b> {customer.volume:.2f} ст.",
                         f"<b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}",
                         (
-                            f'<a href="https://www.google.com/maps/dir/?api=1&destination='
-                            f'{customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving" '
+                            f'<a href="{html.escape(navigation_url, quote=True)}" '
                             f'target="_blank" '
                             f'style="display:inline-block;margin-top:8px;padding:6px 10px;'
                             f'background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">'
                             f'Навигация</a>'
+                            f'<a href="{html.escape(street_view_url, quote=True)}" '
+                            f'target="_blank" '
+                            f'style="display:inline-block;margin-top:8px;margin-left:6px;padding:6px 10px;'
+                            f'background:#fbbc04;color:#1f1f1f;text-decoration:none;border-radius:4px;font-weight:bold;">'
+                            f'Street View</a>'
                         ),
                     ],
                     bus_color,
@@ -491,7 +570,8 @@ class InteractiveMapGenerator:
                     "customerName": str(customer.name),
                     "customerId": str(customer.id),
                     "volume": customer.volume,
-                    "navigationUrl": self._navigation_url(customer.coordinates),
+                    "navigationUrl": navigation_url,
+                    "streetViewUrl": street_view_url,
                 })
 
             popup_html = self._html_popup(
@@ -622,8 +702,34 @@ class InteractiveMapGenerator:
       color: #333; cursor: pointer; font-size: 18px; line-height: 1; font-weight: 700;
     }}
     .client-close:hover {{ background: #e4e7eb; }}
+    .client-route-stats {{
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      margin: 8px 0 10px; padding: 8px; background: #f8fafc;
+      border: 1px solid #e1e6ee; border-radius: 6px;
+    }}
+    .client-route-stat {{
+      display: flex; justify-content: space-between; gap: 8px;
+      font-size: 12px; color: #1f2933;
+    }}
+    .client-route-stat b {{ font-size: 12px; }}
     .route-row {{ display: flex; align-items: center; gap: 6px; margin: 4px 0; }}
     .swatch {{ width: 14px; height: 14px; display: inline-block; border-radius: 2px; }}
+    .client-actions {{ display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }}
+    .client-action {{
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      min-height: 24px; padding: 5px 7px; border-radius: 4px;
+      text-decoration: none; font-weight: 700; font-size: 11px; line-height: 1;
+    }}
+    .client-nav {{ background: #1a73e8; color: #fff; }}
+    .client-street {{ background: #fbbc04; color: #1f1f1f; box-shadow: 0 0 0 1px #9a6f00 inset; }}
+    .pegman-icon {{
+      position: relative; display: inline-block; width: 9px; height: 13px;
+      border-radius: 5px 5px 3px 3px; background: #1f1f1f; flex: 0 0 auto;
+    }}
+    .pegman-icon::before {{
+      content: ""; position: absolute; left: 2px; top: -5px; width: 5px; height: 5px;
+      border-radius: 50%; background: #1f1f1f;
+    }}
     .marker-label {{
       color: #fff; font-weight: 700; font-size: 13px; text-align: center;
       text-shadow: 0 1px 2px rgba(0,0,0,.8);
@@ -643,7 +749,7 @@ class InteractiveMapGenerator:
         center: MAP_DATA.center,
         zoom: MAP_DATA.zoom,
         mapTypeControl: true,
-        streetViewControl: false,
+        streetViewControl: true,
         fullscreenControl: true
       }});
       infoWindow = new google.maps.InfoWindow();
@@ -813,9 +919,26 @@ class InteractiveMapGenerator:
       }});
     }}
 
+    function formatRouteDuration(minutes) {{
+      const total = Math.max(0, Math.round(Number(minutes) || 0));
+      const hours = Math.floor(total / 60);
+      const mins = total % 60;
+      if (hours > 0 && mins > 0) return `${{hours}}ч ${{mins}}м`;
+      if (hours > 0) return `${{hours}}ч`;
+      return `${{mins}}м`;
+    }}
+
+    function formatRouteNumber(value) {{
+      const number = Number(value) || 0;
+      return Math.abs(number - Math.round(number)) < 0.05
+        ? String(Math.round(number))
+        : number.toFixed(1);
+    }}
+
     function renderCustomerPanel(container, routeObjects, map) {{
       const route = MAP_DATA.routes[0];
       const objects = routeObjects[route.id];
+      const routeTimeText = formatRouteDuration(route.timeMin);
       container.classList.add("collapsed");
       container.innerHTML = `
         <button type="button" class="client-toggle">Клиенти</button>
@@ -824,7 +947,12 @@ class InteractiveMapGenerator:
             <b>Клиенти - маршрут ${{MAP_DATA.singleRouteNumber}}</b>
             <button type="button" class="client-close" title="Затвори">×</button>
           </div>
-          <div style="margin:5px 0 8px;color:#555;font-size:12px;text-align:center">${{route.markers.length}} клиента · ${{route.volume.toFixed(1)}} стека</div>
+          <div class="client-route-stats">
+            <div class="client-route-stat"><span>Общо:</span><b>${{route.markers.length}} клиента</b></div>
+            <div class="client-route-stat"><span>Стекове:</span><b>${{formatRouteNumber(route.volume)}}</b></div>
+            <div class="client-route-stat"><span>Време:</span><b>${{routeTimeText}}</b></div>
+            <div class="client-route-stat"><span>Км:</span><b>${{formatRouteNumber(route.distanceKm)}}</b></div>
+          </div>
           <div class="client-list"></div>
         </div>
       `;
@@ -851,8 +979,15 @@ class InteractiveMapGenerator:
             <span style="display:block;font-weight:bold;font-size:12px;overflow-wrap:anywhere">${{point.customerName}}</span>
             <span style="display:block;color:#666;font-size:11px">ID: ${{point.customerId}} · ${{Number(point.volume).toFixed(2)}} ст.</span>
           </span>
-          <a href="${{point.navigationUrl}}" target="_blank" rel="noopener"
-             style="padding:5px 7px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;font-size:11px">Навигация</a>
+          <span class="client-actions">
+            <a class="client-action client-nav" href="${{point.navigationUrl}}" target="_blank" rel="noopener"
+               title="Отвори навигация до клиента">Навигация</a>
+            <a class="client-action client-street" href="${{point.streetViewUrl}}" target="_blank" rel="noopener"
+               title="Отвори Google Street View до клиента">
+              <span class="pegman-icon" aria-hidden="true"></span>
+              <span>Street View</span>
+            </a>
+          </span>
         `;
         row.addEventListener("click", (event) => {{
           if (event.target.closest("a")) return;
@@ -1540,6 +1675,90 @@ class InteractiveMapGenerator:
             f"{coords[0]:.6f},{coords[1]:.6f}&travelmode=driving"
         )
 
+    def _format_route_duration(self, minutes: float) -> str:
+        total_minutes = max(0, int(round(minutes or 0)))
+        hours, mins = divmod(total_minutes, 60)
+        if hours and mins:
+            return f"{hours}ч {mins}м"
+        if hours:
+            return f"{hours}ч"
+        return f"{mins}м"
+
+    def _format_route_number(self, value: float) -> str:
+        number = float(value or 0)
+        if abs(number - round(number)) < 0.05:
+            return str(int(round(number)))
+        return f"{number:.1f}"
+
+    def _route_stats_html(self, route: Route) -> str:
+        return f'''
+            <div class="route-client-stats">
+                <div class="route-client-stat"><span>Общо:</span><b>{len(route.customers)} клиента</b></div>
+                <div class="route-client-stat"><span>Стекове:</span><b>{self._format_route_number(route.total_volume)}</b></div>
+                <div class="route-client-stat"><span>Време:</span><b>{self._format_route_duration(route.total_time_minutes)}</b></div>
+                <div class="route-client-stat"><span>Км:</span><b>{self._format_route_number(route.total_distance_km)}</b></div>
+            </div>
+        '''
+
+    def _street_view_url(self, coords: Tuple[float, float]) -> str:
+        return (
+            "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="
+            f"{coords[0]:.6f},{coords[1]:.6f}"
+        )
+
+    def _street_view_picker_css(self) -> str:
+        return """
+            .street-view-picker-control {
+                font-family: Arial, sans-serif;
+            }
+            .street-view-picker-button {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                border: 1px solid rgba(35, 35, 35, 0.35);
+                border-radius: 6px;
+                background: #ffffff;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+                color: #222;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 700;
+                padding: 8px 10px;
+            }
+            .street-view-picker-button:hover,
+            .street-view-picker-active {
+                background: #fff8d8;
+            }
+            .street-view-picker-icon {
+                position: relative;
+                width: 16px;
+                height: 22px;
+                display: inline-block;
+            }
+            .street-view-picker-icon::before {
+                content: "";
+                position: absolute;
+                left: 5px;
+                top: 0;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: #fbbc04;
+                box-shadow: 0 0 0 1px #9a6f00 inset;
+            }
+            .street-view-picker-icon::after {
+                content: "";
+                position: absolute;
+                left: 2px;
+                top: 8px;
+                width: 12px;
+                height: 13px;
+                border-radius: 7px 7px 4px 4px;
+                background: #fbbc04;
+                box-shadow: 0 0 0 1px #9a6f00 inset;
+            }
+        """
+
     def _add_single_route_customer_panel(
         self,
         route_map: folium.Map,
@@ -1553,12 +1772,17 @@ class InteractiveMapGenerator:
 
         rows = []
         panel_data = []
+        route_stats_html = self._route_stats_html(route)
         for idx, entry in enumerate(marker_entries):
             number = int(entry["number"])
             name = html.escape(str(entry["name"]))
             customer_id = html.escape(str(entry["id"]))
             volume = float(entry["volume"])
             nav_url = html.escape(str(entry["navigation_url"]), quote=True)
+            street_url = html.escape(str(entry.get(
+                "street_view_url",
+                self._street_view_url((float(entry["lat"]), float(entry["lng"]))),
+            )), quote=True)
             rows.append(
                 f'''
                 <div class="route-client-card" role="button" tabindex="0" data-client-index="{idx}">
@@ -1567,7 +1791,13 @@ class InteractiveMapGenerator:
                         <div class="route-client-name">{name}</div>
                         <div class="route-client-meta">ID: {customer_id} · {volume:.2f} ст.</div>
                     </div>
-                    <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                    <div class="route-client-actions">
+                        <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                        <a class="route-client-street" href="{street_url}" target="_blank" rel="noopener" title="Отвори Google Street View до клиента">
+                            <span class="route-client-street-icon" aria-hidden="true"></span>
+                            <span>Street View</span>
+                        </a>
+                    </div>
                 </div>
                 '''
             )
@@ -1610,6 +1840,26 @@ class InteractiveMapGenerator:
                 color: #555;
                 text-align: center;
             }}
+            .route-client-stats {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                margin: 8px 0 10px;
+                padding: 8px;
+                background: #f8fafc;
+                border: 1px solid #e1e6ee;
+                border-radius: 6px;
+            }}
+            .route-client-stat {{
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 12px;
+                color: #1f2933;
+            }}
+            .route-client-stat b {{
+                font-size: 12px;
+            }}
             .route-client-card {{
                 display: grid;
                 grid-template-columns: 30px 1fr auto;
@@ -1646,16 +1896,52 @@ class InteractiveMapGenerator:
                 color: #666;
                 margin-top: 2px;
             }}
-            .route-client-nav {{
-                display: inline-block;
+            .route-client-actions {{
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                align-items: stretch;
+            }}
+            .route-client-nav, .route-client-street {{
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
                 padding: 5px 7px;
                 border-radius: 4px;
-                background: #1a73e8;
-                color: #fff !important;
                 text-decoration: none;
                 font-size: 11px;
                 font-weight: 700;
                 white-space: nowrap;
+                text-align: center;
+            }}
+            .route-client-nav {{
+                background: #1a73e8;
+                color: #fff !important;
+            }}
+            .route-client-street {{
+                background: #fbbc04;
+                color: #1f1f1f !important;
+                box-shadow: 0 0 0 1px #9a6f00 inset;
+            }}
+            .route-client-street-icon {{
+                position: relative;
+                display: inline-block;
+                width: 9px;
+                height: 13px;
+                border-radius: 5px 5px 3px 3px;
+                background: #1f1f1f;
+                flex: 0 0 auto;
+            }}
+            .route-client-street-icon::before {{
+                content: "";
+                position: absolute;
+                left: 2px;
+                top: -5px;
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                background: #1f1f1f;
             }}
             @media (max-width: 700px) {{
                 .route-client-panel {{
@@ -1670,7 +1956,7 @@ class InteractiveMapGenerator:
         </style>
         <div class="route-client-panel">
             <h4>Клиенти - маршрут {route_number}</h4>
-            <div class="route-client-summary">{len(route.customers)} клиента · {route.total_volume:.1f} стека</div>
+            {route_stats_html}
             {''.join(rows)}
         </div>
         <script>
@@ -1718,12 +2004,17 @@ class InteractiveMapGenerator:
         rows = []
         panel_data = []
         safe_color = html.escape(bus_color, quote=True)
+        route_stats_html = self._route_stats_html(route)
         for idx, entry in enumerate(marker_entries):
             number = int(entry["number"])
             name = html.escape(str(entry["name"]))
             customer_id = html.escape(str(entry["id"]))
             volume = float(entry["volume"])
             nav_url = html.escape(str(entry["navigation_url"]), quote=True)
+            street_url = html.escape(str(entry.get(
+                "street_view_url",
+                self._street_view_url((float(entry["lat"]), float(entry["lng"]))),
+            )), quote=True)
             rows.append(
                 f'''
                 <div class="route-client-card" role="button" tabindex="0" data-client-index="{idx}">
@@ -1732,7 +2023,13 @@ class InteractiveMapGenerator:
                         <div class="route-client-name">{name}</div>
                         <div class="route-client-meta">ID: {customer_id} &middot; {volume:.2f} ст.</div>
                     </div>
-                    <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                    <div class="route-client-actions">
+                        <a class="route-client-nav" href="{nav_url}" target="_blank" rel="noopener">Навигация</a>
+                        <a class="route-client-street" href="{street_url}" target="_blank" rel="noopener" title="Отвори Google Street View до клиента">
+                            <span class="route-client-street-icon" aria-hidden="true"></span>
+                            <span>Street View</span>
+                        </a>
+                    </div>
                 </div>
                 '''
             )
@@ -1747,7 +2044,7 @@ class InteractiveMapGenerator:
                 <h4>Клиенти - маршрут {route_number}</h4>
                 <button type="button" class="route-client-close" title="Затвори">×</button>
             </div>
-            <div class="route-client-summary">{len(route.customers)} клиента &middot; {route.total_volume:.1f} стека</div>
+            {route_stats_html}
             {''.join(rows)}
         '''
         panel_css = '''
@@ -1816,6 +2113,26 @@ class InteractiveMapGenerator:
                 color: #555;
                 text-align: center;
             }
+            .route-client-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+                margin: 8px 0 10px;
+                padding: 8px;
+                background: #f8fafc;
+                border: 1px solid #e1e6ee;
+                border-radius: 6px;
+            }
+            .route-client-stat {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                font-size: 12px;
+                color: #1f2933;
+            }
+            .route-client-stat b {
+                font-size: 12px;
+            }
             .route-client-card {
                 display: grid;
                 grid-template-columns: 30px minmax(0, 1fr) auto;
@@ -1852,16 +2169,52 @@ class InteractiveMapGenerator:
                 color: #666;
                 margin-top: 2px;
             }
-            .route-client-nav {
-                display: inline-block;
+            .route-client-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                align-items: stretch;
+            }
+            .route-client-nav, .route-client-street {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
                 padding: 5px 7px;
                 border-radius: 4px;
-                background: #1a73e8;
-                color: #fff !important;
                 text-decoration: none;
                 font-size: 11px;
                 font-weight: 700;
                 white-space: nowrap;
+                text-align: center;
+            }
+            .route-client-nav {
+                background: #1a73e8;
+                color: #fff !important;
+            }
+            .route-client-street {
+                background: #fbbc04;
+                color: #1f1f1f !important;
+                box-shadow: 0 0 0 1px #9a6f00 inset;
+            }
+            .route-client-street-icon {
+                position: relative;
+                display: inline-block;
+                width: 9px;
+                height: 13px;
+                border-radius: 5px 5px 3px 3px;
+                background: #1f1f1f;
+                flex: 0 0 auto;
+            }
+            .route-client-street-icon::before {
+                content: "";
+                position: absolute;
+                left: 2px;
+                top: -5px;
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                background: #1f1f1f;
             }
             @media (max-width: 700px) {
                 .route-client-panel {
@@ -1902,6 +2255,7 @@ class InteractiveMapGenerator:
             )
 
         route_map = self._create_folium_map(center)
+        route_map.add_child(StreetViewPicker(self._street_view_picker_css()))
 
         # Добавяме маркер за депото
         self._add_depot_markers(route_map, [route_depot])
@@ -1926,6 +2280,8 @@ class InteractiveMapGenerator:
         for client_idx, customer in enumerate(route.customers):
             if customer.coordinates:
                 client_number = client_idx + 1
+                navigation_url = self._navigation_url(customer.coordinates)
+                street_view_url = self._street_view_url(customer.coordinates)
                 icon_html = f'''
                 <div style="
                     background-color: {bus_color};
@@ -1953,10 +2309,15 @@ class InteractiveMapGenerator:
                     <b>Ред в маршрута:</b> #{client_number}<br>
                     <b>Обем:</b> {customer.volume:.2f} ст.<br>
                     <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
-                    <a href="{self._navigation_url(customer.coordinates)}"
+                    <a href="{navigation_url}"
                        target="_blank"
                        style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
                         Навигация
+                    </a>
+                    <a href="{street_view_url}"
+                       target="_blank"
+                       style="display:inline-block;margin-top:8px;margin-left:6px;padding:6px 10px;background:#fbbc04;color:#1f1f1f;text-decoration:none;border-radius:4px;font-weight:bold;">
+                        Street View
                     </a>
                 </div>
                 """
@@ -1980,7 +2341,8 @@ class InteractiveMapGenerator:
                     "volume": customer.volume,
                     "lat": customer.coordinates[0],
                     "lng": customer.coordinates[1],
-                    "navigation_url": self._navigation_url(customer.coordinates),
+                    "navigation_url": navigation_url,
+                    "street_view_url": street_view_url,
                 })
 
         # Линия на маршрута

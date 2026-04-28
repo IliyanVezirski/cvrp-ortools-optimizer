@@ -425,9 +425,12 @@ class ORToolsSolver:
             
             def _customer_is_in_center_zone(customer: Customer) -> bool:
                 return bool(
-                    customer.coordinates
-                    and self.location_config
-                    and is_location_in_center_zone(customer.coordinates, self.location_config)
+                    customer.id in center_zone_customer_ids
+                    or (
+                        customer.coordinates
+                        and self.location_config
+                        and is_location_in_center_zone(customer.coordinates, self.location_config)
+                    )
                 )
 
             # 6. ГЛОБА ЗА ОСТАНАЛИТЕ БУСОВЕ ЗА ВЛИЗАНЕ В ЦЕНТЪРА
@@ -1829,8 +1832,9 @@ class ORToolsSolver:
 class CVRPSolver:
     """Главен клас за решаване на CVRP - опростена версия."""
     
-    def __init__(self, config: Optional[CVRPConfig] = None):
+    def __init__(self, config: Optional[CVRPConfig] = None, location_config: Optional[LocationConfig] = None):
         self.config = config or get_config().cvrp
+        self.location_config = location_config or get_config().locations
     
     def solve(self, 
               allocation: WarehouseAllocation, 
@@ -1853,7 +1857,7 @@ class CVRPSolver:
         solver = ORToolsSolver(
             self.config, enabled_vehicles, allocation.vehicle_customers, 
             distance_matrix, sorted_depots, allocation.center_zone_customers,
-            get_config().locations
+            self.location_config
         )
         
         # Добавяме лог за дебъгване
