@@ -488,6 +488,30 @@ class InteractiveMapGenerator:
             f"{body}</div>"
         )
 
+    def _popup_action_buttons(self, navigation_url: str, street_view_url: str) -> str:
+        safe_nav = html.escape(navigation_url, quote=True)
+        safe_street = html.escape(street_view_url, quote=True)
+        pegman_icon = (
+            '<span style="position:relative;display:inline-block;width:9px;height:13px;'
+            'border-radius:5px 5px 3px 3px;background:#1f1f1f;vertical-align:-2px;'
+            'margin-right:5px;">'
+            '<span style="position:absolute;left:2px;top:-5px;width:5px;height:5px;'
+            'border-radius:50%;background:#1f1f1f;"></span>'
+            '</span>'
+        )
+        return (
+            f'<a href="{safe_nav}" target="_blank" rel="noopener" '
+            'style="display:inline-block;margin-top:8px;padding:6px 10px;'
+            'background:#1a73e8;color:white;text-decoration:none;'
+            'border-radius:4px;font-weight:bold;">Навигация</a>'
+            f'<a href="{safe_street}" target="_blank" rel="noopener" '
+            'title="Отвори Google Street View до клиента" '
+            'style="display:inline-block;margin-top:8px;margin-left:6px;padding:6px 10px;'
+            'background:#fbbc04;color:#1f1f1f;text-decoration:none;border-radius:4px;'
+            'font-weight:bold;box-shadow:0 0 0 1px #9a6f00 inset;">'
+            f'{pegman_icon}Street View</a>'
+        )
+
     def _get_route_visual_geometry(
         self,
         route: Route,
@@ -547,18 +571,7 @@ class InteractiveMapGenerator:
                         f"<b>Ред в маршрута:</b> #{client_number}",
                         f"<b>Обем:</b> {customer.volume:.2f} ст.",
                         f"<b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}",
-                        (
-                            f'<a href="{html.escape(navigation_url, quote=True)}" '
-                            f'target="_blank" '
-                            f'style="display:inline-block;margin-top:8px;padding:6px 10px;'
-                            f'background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">'
-                            f'Навигация</a>'
-                            f'<a href="{html.escape(street_view_url, quote=True)}" '
-                            f'target="_blank" '
-                            f'style="display:inline-block;margin-top:8px;margin-left:6px;padding:6px 10px;'
-                            f'background:#fbbc04;color:#1f1f1f;text-decoration:none;border-radius:4px;font-weight:bold;">'
-                            f'Street View</a>'
-                        ),
+                        self._popup_action_buttons(navigation_url, street_view_url),
                     ],
                     bus_color,
                 )
@@ -1405,6 +1418,8 @@ class InteractiveMapGenerator:
                 if customer.coordinates:
                     # Създаваме номериран маркер
                     client_number = client_idx + 1
+                    navigation_url = self._navigation_url(customer.coordinates)
+                    street_view_url = self._street_view_url(customer.coordinates)
                     
                     # HTML за номерирано пинче с уникален цвят на автобуса
                     icon_html = f'''
@@ -1435,11 +1450,7 @@ class InteractiveMapGenerator:
                         <b>Ред в маршрута:</b> #{client_number}<br>
                         <b>Обем:</b> {customer.volume:.2f} ст.<br>
                         <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
-                        <a href="https://www.google.com/maps/dir/?api=1&destination={customer.coordinates[0]:.6f},{customer.coordinates[1]:.6f}&travelmode=driving"
-                           target="_blank"
-                           style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
-                            Навигация
-                        </a>
+                        {self._popup_action_buttons(navigation_url, street_view_url)}
                     </div>
                     """
                     
@@ -2309,16 +2320,7 @@ class InteractiveMapGenerator:
                     <b>Ред в маршрута:</b> #{client_number}<br>
                     <b>Обем:</b> {customer.volume:.2f} ст.<br>
                     <b>Координати:</b> {customer.coordinates[0]:.6f}, {customer.coordinates[1]:.6f}<br>
-                    <a href="{navigation_url}"
-                       target="_blank"
-                       style="display:inline-block;margin-top:8px;padding:6px 10px;background:#1a73e8;color:white;text-decoration:none;border-radius:4px;font-weight:bold;">
-                        Навигация
-                    </a>
-                    <a href="{street_view_url}"
-                       target="_blank"
-                       style="display:inline-block;margin-top:8px;margin-left:6px;padding:6px 10px;background:#fbbc04;color:#1f1f1f;text-decoration:none;border-radius:4px;font-weight:bold;">
-                        Street View
-                    </a>
+                    {self._popup_action_buttons(navigation_url, street_view_url)}
                 </div>
                 """
                 marker = folium.Marker(
